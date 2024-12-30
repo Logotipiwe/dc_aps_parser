@@ -20,7 +20,6 @@ func (k *KrishaWebClientAdapter) GetParseResult() (*domain.ParseResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	println(mapData.NbTotal)
 	parseResult := domain.ParseResult{
 		ID:     0,
 		ApsNum: mapData.NbTotal,

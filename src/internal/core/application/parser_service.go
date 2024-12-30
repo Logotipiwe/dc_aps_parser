@@ -1,49 +1,24 @@
 package application
 
-import (
-	"fmt"
-	"time"
-)
-
-type Parser struct {
-	ID      int
-	stopped bool
+type ParserService struct {
+	parsers []*Parser
+	*ResultService
 }
 
-func (p *Parser) init() {
-	go func() {
-		for {
-			fmt.Printf("Parsing %d with  ...\n", p.ID)
-			time.Sleep(time.Second)
-			if p.stopped {
-				break
-			}
-		}
-	}()
-}
-
-func (p *Parser) Stop() {
-	fmt.Printf("Parser %d stopped\n", p.ID)
-	p.stopped = true
-}
-
-func newParser(ID int) *Parser {
-	return &Parser{
-		ID:      ID,
-		stopped: false,
+func NewParserService(
+	resultService *ResultService,
+) *ParserService {
+	return &ParserService{
+		parsers:       make([]*Parser, 0),
+		ResultService: resultService,
 	}
 }
 
-type ParserService struct {
-	parsers []*Parser
-}
-
-func NewParserService() *ParserService {
-	return &ParserService{}
-}
-
 func (p *ParserService) NewParser() (*Parser, error) {
-	parser := newParser(len(p.parsers))
+	parser := newParser(
+		len(p.parsers),
+		p.ResultService,
+	)
 	parser.init()
 	p.parsers = append(p.parsers, parser)
 	return parser, nil

@@ -15,19 +15,21 @@ type services struct {
 }
 
 func initServices(router *gin.Engine) services {
+	resultService := application.NewResultService(
+		output.NewResultRepository(),
+		output.NewKrishaWebClientAdapter(
+			krishawebclient.NewKrishaWebClient(),
+		),
+	)
 	s := services{
 		input.NewResultController(
 			router,
-			*application.NewResultService(
-				output.NewResultRepository(),
-				output.NewKrishaWebClientAdapter(
-					krishawebclient.NewKrishaWebClient(),
-				),
-			),
+			resultService,
 		),
 		input.NewParserController(
 			router,
-			application.NewParserService(),
+			application.NewParserService(
+				resultService),
 		),
 	}
 	return s
