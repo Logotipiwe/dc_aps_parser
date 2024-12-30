@@ -3,8 +3,9 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"ports-adapters-study/src/internal/adapters/input"
+	"ports-adapters-study/src/internal/adapters/output"
 	"ports-adapters-study/src/internal/core/application"
-	"ports-adapters-study/src/internal/platform/storage"
+	krishawebclient "ports-adapters-study/src/internal/infrastructure/krisha"
 )
 
 func main() {
@@ -12,7 +13,10 @@ func main() {
 
 	handler := input.NewResultHandler(
 		*application.NewResultService(
-			storage.NewResultRepository(),
+			output.NewResultRepository(),
+			output.NewKrishaWebClientAdapter(
+				krishawebclient.NewKrishaWebClient(),
+			),
 		),
 	)
 

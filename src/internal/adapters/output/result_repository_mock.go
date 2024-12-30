@@ -1,4 +1,4 @@
-package storage
+package output
 
 import (
 	"ports-adapters-study/src/internal/core/domain"
@@ -12,11 +12,9 @@ func NewResultRepositoryMock() *ResultRepositoryMock {
 }
 
 func (r ResultRepositoryMock) AddResult(result domain.ParseResult) error {
-	//TODO implement me
 	return nil
 }
 
 func (r ResultRepositoryMock) GetAllResults() ([]domain.ParseResult, error) {
-	//TODO implement me
 	return make([]domain.ParseResult, 0), nil
 }

@@ -1,4 +1,4 @@
-package storage
+package output
 
 import (
 	"ports-adapters-study/src/internal/core/domain"
