@@ -5,50 +5,43 @@ import (
 	"ports-adapters-study/src/internal/adapters/input"
 	"ports-adapters-study/src/internal/adapters/output"
 	"ports-adapters-study/src/internal/core/application"
+	driverport "ports-adapters-study/src/internal/core/ports/input"
 	krishawebclient "ports-adapters-study/src/internal/infrastructure/krisha"
 )
+
+type services struct {
+	driverport.ResultController
+	driverport.ParserController
+}
+
+func initServices(router *gin.Engine) services {
+	s := services{
+		input.NewResultController(
+			router,
+			*application.NewResultService(
+				output.NewResultRepository(),
+				output.NewKrishaWebClientAdapter(
+					krishawebclient.NewKrishaWebClient(),
+				),
+			),
+		),
+		input.NewParserController(
+			router,
+			application.NewParserService(),
+		),
+	}
+	return s
+}
 
 func main() {
 	println("Started!")
 
-	handler := input.NewResultController(
-		*application.NewResultService(
-			output.NewResultRepository(),
-			output.NewKrishaWebClientAdapter(
-				krishawebclient.NewKrishaWebClient(),
-			),
-		),
-	)
-
 	router := gin.Default()
-	router.GET("/get", withError(func(c *gin.Context) error {
-		err := handler.GetResult(c)
-		if err != nil {
-			return err
-		}
-		return nil
-	}))
-	router.GET("/history", withError(func(c *gin.Context) error {
-		err := handler.GetResultsHistory(c)
-		if err != nil {
-			return err
-		}
-		return nil
-	}))
+
+	initServices(router)
 
 	err := router.Run(":81")
 	if err != nil {
 		panic(err.Error())
-	}
-}
-
-func withError(f func(c *gin.Context) error) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		err := f(c)
-		if err != nil {
-			c.JSON(500, gin.H{
-				"message": err.Error(),
-			})
-		}
 	}
 }

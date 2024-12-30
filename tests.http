@@ -1,5 +1,10 @@
 GET localhost:81/get
 
 ###
-
 GET localhost:81/history
+
+###
+POST localhost:81/parser/new
+
+###
+POST localhost:81/parser/stop?id=1

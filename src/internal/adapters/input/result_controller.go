@@ -4,20 +4,25 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"ports-adapters-study/src/internal/core/application"
-	dto "ports-adapters-study/src/internal/core/application/dto"
+	"ports-adapters-study/src/internal/core/application/dto"
+	driverport "ports-adapters-study/src/internal/core/ports/input"
+	"ports-adapters-study/src/pkg"
 )
 
-type ResultController struct {
+type resultController struct {
 	resultService application.ResultService
 }
 
-func NewResultController(service application.ResultService) *ResultController {
-	return &ResultController{
+func NewResultController(router *gin.Engine, service application.ResultService) driverport.ResultController {
+	r := &resultController{
 		service,
 	}
+	router.GET("/get", pkg.WithError(r.GetResult))
+	router.GET("/history", pkg.WithError(r.GetResultsHistory))
+	return r
 }
 
-func (r *ResultController) GetResult(ctx *gin.Context) error {
+func (r *resultController) GetResult(ctx *gin.Context) error {
 	result, err := r.resultService.GetResult()
 	if err != nil {
 		return err
@@ -26,7 +31,7 @@ func (r *ResultController) GetResult(ctx *gin.Context) error {
 	return nil
 }
 
-func (r *ResultController) GetResultsHistory(ctx *gin.Context) error {
+func (r *resultController) GetResultsHistory(ctx *gin.Context) error {
 	history, err := r.resultService.GetResultHistory()
 	if err != nil {
 		return err
