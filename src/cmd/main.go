@@ -7,6 +7,7 @@ import (
 	"ports-adapters-study/src/internal/core/application"
 	driverport "ports-adapters-study/src/internal/core/ports/input"
 	krishawebclient "ports-adapters-study/src/internal/infrastructure/krisha"
+	"ports-adapters-study/src/internal/infrastructure/tg"
 )
 
 type services struct {
@@ -29,7 +30,10 @@ func initServices(router *gin.Engine) services {
 		input.NewParserController(
 			router,
 			application.NewParserService(
-				resultService),
+				resultService, output.NewTgClientAdapter(
+					tg.NewTgClient(),
+				),
+			),
 		),
 	}
 	return s

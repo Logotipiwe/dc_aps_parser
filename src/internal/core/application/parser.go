@@ -2,18 +2,21 @@ package application
 
 import (
 	"fmt"
+	drivenport "ports-adapters-study/src/internal/core/ports/output"
 	"time"
 )
 
 type Parser struct {
-	ID             int
-	stopped        bool
-	resultsService *ResultService
-	isFirstParse   bool
-	prevApsNum     int
+	ID                 int
+	stopped            bool
+	resultsService     *ResultService
+	notificationClient drivenport.NotificationClient
+	isFirstParse       bool
+	prevApsNum         int
 }
 
 func (p *Parser) init() {
+	_ = p.notificationClient.NotifyStartParsing(p.ID)
 	go func() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
@@ -43,6 +46,7 @@ func (p *Parser) doParse() {
 	} else {
 		if p.prevApsNum != result.ApsNum {
 			diff := result.ApsNum - p.prevApsNum
+			_ = p.notificationClient.NotifyChanges(diff)
 			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, result.ApsNum)
 		} else {
 			fmt.Printf("Parser %d. Nothing changed.\n", p.ID)
@@ -51,11 +55,12 @@ func (p *Parser) doParse() {
 	p.prevApsNum = result.ApsNum
 }
 
-func newParser(ID int, service *ResultService) *Parser {
+func newParser(ID int, service *ResultService, client drivenport.NotificationClient) *Parser {
 	return &Parser{
-		ID:             ID,
-		stopped:        false,
-		isFirstParse:   true,
-		resultsService: service,
+		ID:                 ID,
+		stopped:            false,
+		isFirstParse:       true,
+		resultsService:     service,
+		notificationClient: client,
 	}
 }
