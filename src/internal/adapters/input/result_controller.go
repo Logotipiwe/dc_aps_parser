@@ -7,17 +7,17 @@ import (
 	dto "ports-adapters-study/src/internal/core/application/dto"
 )
 
-type ResultHandler struct {
+type ResultController struct {
 	resultService application.ResultService
 }
 
-func NewResultHandler(service application.ResultService) *ResultHandler {
-	return &ResultHandler{
+func NewResultController(service application.ResultService) *ResultController {
+	return &ResultController{
 		service,
 	}
 }
 
-func (r *ResultHandler) GetResult(ctx *gin.Context) error {
+func (r *ResultController) GetResult(ctx *gin.Context) error {
 	result, err := r.resultService.GetResult()
 	if err != nil {
 		return err
@@ -26,7 +26,7 @@ func (r *ResultHandler) GetResult(ctx *gin.Context) error {
 	return nil
 }
 
-func (r *ResultHandler) GetResultsHistory(ctx *gin.Context) error {
+func (r *ResultController) GetResultsHistory(ctx *gin.Context) error {
 	history, err := r.resultService.GetResultHistory()
 	if err != nil {
 		return err

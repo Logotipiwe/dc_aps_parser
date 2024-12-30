@@ -21,19 +21,7 @@ func NewResultService(
 
 func (s *ResultService) GetResult() (*domain.ParseResult, error) {
 	result, err := s.targetClient.GetParseResult()
-	if err != nil {
-		return nil, err
-	}
-	history, err := s.GetResultHistory()
-	if err != nil {
-		return nil, err
-	}
-	result.ID = len(history) + 1
-	err = s.resultDB.AddResult(*result)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return result, err
 }
 
 func (s *ResultService) GetResultHistory() ([]domain.ParseResult, error) {

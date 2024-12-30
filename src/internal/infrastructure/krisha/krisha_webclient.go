@@ -7,14 +7,6 @@ import (
 	"net/http"
 )
 
-var (
-	TargetDomain              = "https://krisha.kz"
-	TargetMapDataPath         = "/a/ajax-map"
-	TargetPath                = "/a/ajax-map-list"
-	PageSize                  = 20
-	TargetMapDataFilterParams = "&lat=43.23814&lon=76.94297&zoom=13&precision=6&bounds=txwwjn%2Ctxwtzb"
-)
-
 type KrishaWebClient struct {
 }
 
@@ -51,16 +43,16 @@ func (s *KrishaWebClient) RequestMapData() (*MapData, error) {
 }
 
 type MapData struct {
-	IsTooManyAdverts bool      `json:"isTooManyAdverts"`
-	ListURL          string    `json:"listUrl"`
-	MetaData         *MetaData `json:"metaData"`
-	NbTotal          int       `json:"nbTotal"`
+	//IsTooManyAdverts bool      `json:"isTooManyAdverts"`
+	//ListURL          string    `json:"listUrl"`
+	//MetaData         *MetaData `json:"metaData"`
+	NbTotal int `json:"nbTotal"`
 }
 
-type MetaData struct {
-	CanonicalURL string `json:"canonicalUrl"`
-	Description  string `json:"description"`
-	Header       string `json:"header"`
-	Keywords     string `json:"keywords"`
-	Title        string `json:"title"`
-}
+//type MetaData struct {
+//	CanonicalURL string `json:"canonicalUrl"`
+//	Description  string `json:"description"`
+//	Header       string `json:"header"`
+//	Keywords     string `json:"keywords"`
+//	Title        string `json:"title"`
+//}

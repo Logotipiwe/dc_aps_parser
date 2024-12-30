@@ -11,7 +11,7 @@ import (
 func main() {
 	println("Started!")
 
-	handler := input.NewResultHandler(
+	handler := input.NewResultController(
 		*application.NewResultService(
 			output.NewResultRepository(),
 			output.NewKrishaWebClientAdapter(
