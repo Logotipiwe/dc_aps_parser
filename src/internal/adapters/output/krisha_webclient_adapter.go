@@ -9,9 +9,9 @@ type KrishaWebClientAdapter struct {
 	krishaClient *krishawebclient.KrishaWebClient
 }
 
-func NewKrishaWebClientAdapter(client *krishawebclient.KrishaWebClient) *KrishaWebClientAdapter {
+func NewKrishaWebClientAdapter() *KrishaWebClientAdapter {
 	return &KrishaWebClientAdapter{
-		client,
+		krishawebclient.NewKrishaWebClient(),
 	}
 }
 

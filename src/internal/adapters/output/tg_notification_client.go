@@ -10,12 +10,10 @@ type tgNotificationClient struct {
 	tgClient *tg.TgClient
 }
 
-func NewTgClientAdapter(
-	tgClient *tg.TgClient,
-) drivenport.NotificationClient {
+func NewTgClientAdapter() drivenport.NotificationClient {
 
 	return &tgNotificationClient{
-		tgClient: tgClient,
+		tgClient: tg.NewTgClient(),
 	}
 }
 
