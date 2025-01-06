@@ -2,6 +2,7 @@ package application
 
 import (
 	drivenport "ports-adapters-study/src/internal/core/ports/output"
+	"sync"
 )
 
 type ParserService struct {
@@ -22,8 +23,10 @@ func NewParserService(
 }
 
 func (p *ParserService) NewParser() (*Parser, error) {
+	wg := new(sync.WaitGroup)
 	parser := newParser(
 		len(p.parsers),
+		wg,
 		p.ResultService,
 		p.NotificationPort,
 		p.resultStoragePort,
@@ -33,24 +36,15 @@ func (p *ParserService) NewParser() (*Parser, error) {
 	return parser, nil
 }
 
-func (p *ParserService) StopParser(ID int) error {
+func (p *ParserService) StopParser(ID int) {
 	p.parsers[ID].Stop()
-	return nil
 }
 
-func (p *ParserService) StopAllParsers() {
+func (p *ParserService) StopAllParsersSync() {
 	for _, parser := range p.parsers {
 		parser.Stop()
 	}
-}
-
-func (p *ParserService) StopAllParsersSync() []error {
-	var errs []error
 	for _, parser := range p.parsers {
-		err := p.StopParser(parser.ID)
-		if err != nil {
-			errs = append(errs, err)
-		}
+		parser.stopWg.Wait()
 	}
-	return errs
 }

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 	"ports-adapters-study/src/internal/adapters/output"
 	"ports-adapters-study/src/internal/core/application"
 	"ports-adapters-study/src/internal/core/domain"
@@ -44,6 +45,7 @@ func Test_GetResult(t *testing.T) {
 
 func Test_CreateParser(t *testing.T) {
 	t.Run("Parser creates", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
 		resultStorageMock := output.NewResultStorageMock()
 		targetClientAdapterMock := output.NewTargetClientAdapterMock([]*domain.ParseResult{
 			{ID: 0, ApsNum: 0},
@@ -54,6 +56,7 @@ func Test_CreateParser(t *testing.T) {
 			TargetClientPort:  targetClientAdapterMock,
 			NotificationPort:  notificationAdapterMock,
 		})
+		defer app.ParserService.StopAllParsersSync()
 
 		parser, err := app.ParserService.NewParser()
 
@@ -70,15 +73,16 @@ func Test_CreateParser(t *testing.T) {
 		assert.Equal(t, 1, len(sentMessages))
 		assert.Equal(t, "Парсер 0 запущен", sentMessages[0])
 
-		app.ParserService.StopAllParsers()
 	})
 
 	t.Run("Parser works", func(t *testing.T) {
-
+		defer goleak.VerifyNone(t)
 		resultStorageMock := output.NewResultStorageMock()
 		targetClientAdapterMock := output.NewTargetClientAdapterMock([]*domain.ParseResult{
 			{ID: 0, ApsNum: 100},
 			{ID: 0, ApsNum: 101},
+			{ID: 0, ApsNum: 103},
+			{ID: 0, ApsNum: 100},
 		})
 		notificationAdapterMock := output.NewNotificationAdapterMock()
 		app := application.NewApp(ports.OutputPorts{
@@ -86,8 +90,9 @@ func Test_CreateParser(t *testing.T) {
 			TargetClientPort:  targetClientAdapterMock,
 			NotificationPort:  notificationAdapterMock,
 		})
+		defer app.ParserService.StopAllParsersSync()
 
-		notificationAdapterMock.SetCalls(2)
+		notificationAdapterMock.SetCalls(4)
 
 		_, err := app.ParserService.NewParser()
 
@@ -99,7 +104,9 @@ func Test_CreateParser(t *testing.T) {
 		notificationAdapterMock.WaitForCalls()
 
 		sentMessages := notificationAdapterMock.GetSentMessages()
-		assert.Equal(t, 2, len(sentMessages))
+		assert.Equal(t, 4, len(sentMessages))
 		assert.Equal(t, "Квартир стало больше на 1", sentMessages[1])
+		assert.Equal(t, "Квартир стало больше на 2", sentMessages[2])
+		assert.Equal(t, "Квартир стало меньше на 3", sentMessages[3])
 	})
 }
