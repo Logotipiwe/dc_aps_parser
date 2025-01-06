@@ -43,7 +43,7 @@ func (p *Parser) init() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
 			p.doParse()
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(20 * time.Second)
 			if p.stopped {
 				break
 			}
@@ -65,11 +65,11 @@ func (p *Parser) doParse() {
 		return
 	}
 	if p.isFirstParse {
-		fmt.Printf("Parser %d. First parse got %d aps\n", p.ID, result.ApsNum)
+		fmt.Printf("Parser %d. First parse got %d aps\n", p.ID, len(result.Items))
 		p.isFirstParse = false
 	} else {
-		if p.prevApsNum != result.ApsNum {
-			diff := result.ApsNum - p.prevApsNum
+		if p.prevApsNum != len(result.Items) {
+			diff := len(result.Items) - p.prevApsNum
 			var msg string
 			if diff > 0 {
 				msg = fmt.Sprintf("Квартир стало больше на %d", diff)
@@ -77,15 +77,11 @@ func (p *Parser) doParse() {
 				msg = fmt.Sprintf("Квартир стало меньше на %d", -diff)
 			}
 			_ = p.notificationClient.SendMessage(msg)
-			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, result.ApsNum)
+			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, len(result.Items))
 		} else {
 			fmt.Printf("Parser %d. Nothing changed.\n", p.ID)
 		}
 	}
 
-	err = p.resultStorage.AddResult(*result)
-	if err != nil {
-		_ = fmt.Errorf("Parser %d. Add result error: %s\n", p.ID, err)
-	}
-	p.prevApsNum = result.ApsNum
+	p.prevApsNum = len(result.Items)
 }

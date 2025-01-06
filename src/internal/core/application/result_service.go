@@ -19,12 +19,6 @@ func NewResultService(
 	}
 }
 
-func (s *ResultService) GetResult() (*domain.ParseResult, error) {
-	result, err := s.targetClientPort.GetParseResult()
-	return result, err
-}
-
-func (s *ResultService) GetResultHistory() ([]domain.ParseResult, error) {
-	results, err := s.resultStoragePort.GetAllResults()
-	return results, err
+func (s *ResultService) GetResult() (domain.ParseResult, error) {
+	return s.targetClientPort.GetParseResult()
 }

@@ -11,7 +11,6 @@ import (
 func InitControllers(app App) *gin.Engine {
 	router := gin.Default()
 	_ = InputPorts{
-		ResultPort: NewResultController(router, app.ResultService),
 		ParserPort: NewParserController(router, app.ParserService),
 	}
 	err := router.Run(":81")

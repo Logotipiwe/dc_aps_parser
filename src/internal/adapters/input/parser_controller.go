@@ -42,10 +42,7 @@ func (c *parserController) StopParser(ctx *gin.Context) error {
 	if err != nil {
 		return err
 	}
-	err = c.ParserService.StopParser(id)
-	if err != nil {
-		return err
-	}
+	c.ParserService.StopParser(id)
 	ctx.JSON(200, nil)
 	return nil
 }

@@ -6,13 +6,13 @@ import (
 )
 
 type TargetClientAdapterMock struct {
-	results           []*domain.ParseResult
+	results           []domain.ParseResult
 	currIndex         int
 	wg                *sync.WaitGroup
 	isWaitingForCalls bool
 }
 
-func NewTargetClientAdapterMock(results []*domain.ParseResult) *TargetClientAdapterMock {
+func NewTargetClientAdapterMock(results []domain.ParseResult) *TargetClientAdapterMock {
 	return &TargetClientAdapterMock{
 		results:           results,
 		currIndex:         0,
@@ -21,7 +21,7 @@ func NewTargetClientAdapterMock(results []*domain.ParseResult) *TargetClientAdap
 	}
 }
 
-func (k *TargetClientAdapterMock) GetParseResult() (*domain.ParseResult, error) {
+func (k *TargetClientAdapterMock) GetParseResult() (domain.ParseResult, error) {
 	result := k.results[k.currIndex]
 	k.currIndex++
 	if k.currIndex == len(k.results) {

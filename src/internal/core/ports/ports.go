@@ -12,6 +12,5 @@ type OutputPorts struct {
 }
 
 type InputPorts struct {
-	ResultPort
 	ParserPort
 }

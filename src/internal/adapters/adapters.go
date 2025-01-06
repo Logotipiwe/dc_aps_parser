@@ -8,16 +8,14 @@ import (
 
 func CreateAdapters() ports.OutputPorts {
 	return ports.OutputPorts{
-		ResultStoragePort: NewResultStorageSqlite(),
-		TargetClientPort:  NewTargetClientWebAdapter(),
-		NotificationPort:  NewNotificationAdapterTg(),
+		TargetClientPort: NewTargetClientWebAdapter(),
+		NotificationPort: NewNotificationAdapterTg(),
 	}
 }
 
-func CreateMockAdapters(results []*domain.ParseResult) ports.OutputPorts {
+func CreateMockAdapters(results []domain.ParseResult) ports.OutputPorts {
 	return ports.OutputPorts{
-		ResultStoragePort: NewResultStorageMock(),
-		TargetClientPort:  NewTargetClientAdapterMock(results),
-		NotificationPort:  NewNotificationAdapterMock(),
+		TargetClientPort: NewTargetClientAdapterMock(results),
+		NotificationPort: NewNotificationAdapterMock(),
 	}
 }
