@@ -15,7 +15,7 @@ type parserController struct {
 func NewParserController(
 	router *gin.Engine,
 	service *application.ParserService,
-) driverport.ParserController {
+) driverport.ParserPort {
 	p := &parserController{
 		service,
 	}

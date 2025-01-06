@@ -1,17 +1,16 @@
-package drivenport
+package outputport
 
 import "ports-adapters-study/src/internal/core/domain"
 
-type ResultDB interface {
+type ResultStoragePort interface {
 	AddResult(result domain.ParseResult) error
 	GetAllResults() ([]domain.ParseResult, error)
 }
 
-type TargetClient interface {
+type TargetClientPort interface {
 	GetParseResult() (*domain.ParseResult, error)
 }
 
-type NotificationClient interface {
-	NotifyStartParsing(parserID int) error
-	NotifyChanges(diff int) error
+type NotificationPort interface {
+	SendMessage(text string) error
 }

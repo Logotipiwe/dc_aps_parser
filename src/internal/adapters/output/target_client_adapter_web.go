@@ -5,17 +5,17 @@ import (
 	krishawebclient "ports-adapters-study/src/internal/infrastructure/krisha"
 )
 
-type KrishaWebClientAdapter struct {
+type TargetClientAdapterWeb struct {
 	krishaClient *krishawebclient.KrishaWebClient
 }
 
-func NewKrishaWebClientAdapter() *KrishaWebClientAdapter {
-	return &KrishaWebClientAdapter{
+func NewTargetClientWebAdapter() *TargetClientAdapterWeb {
+	return &TargetClientAdapterWeb{
 		krishawebclient.NewKrishaWebClient(),
 	}
 }
 
-func (k *KrishaWebClientAdapter) GetParseResult() (*domain.ParseResult, error) {
+func (k *TargetClientAdapterWeb) GetParseResult() (*domain.ParseResult, error) {
 	mapData, err := k.krishaClient.RequestMapData()
 	if err != nil {
 		return nil, err

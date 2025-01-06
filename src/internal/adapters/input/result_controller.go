@@ -13,7 +13,7 @@ type resultController struct {
 	resultService *application.ResultService
 }
 
-func NewResultController(router *gin.Engine, service *application.ResultService) driverport.ResultController {
+func NewResultController(router *gin.Engine, service *application.ResultService) driverport.ResultPort {
 	r := &resultController{
 		service,
 	}

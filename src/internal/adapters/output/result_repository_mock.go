@@ -1,20 +1,24 @@
 package output
 
 import (
+	"fmt"
 	"ports-adapters-study/src/internal/core/domain"
 )
 
-type ResultRepositoryMock struct {
+type ResultStorageMock struct {
+	results []domain.ParseResult
 }
 
-func NewResultRepositoryMock() *ResultRepositoryMock {
-	return &ResultRepositoryMock{}
+func NewResultStorageMock() *ResultStorageMock {
+	return &ResultStorageMock{}
 }
 
-func (r ResultRepositoryMock) AddResult(result domain.ParseResult) error {
+func (r *ResultStorageMock) AddResult(result domain.ParseResult) error {
+	fmt.Println("Using mock repo to save result")
+	r.results = append(r.results, result)
 	return nil
 }
 
-func (r ResultRepositoryMock) GetAllResults() ([]domain.ParseResult, error) {
-	return make([]domain.ParseResult, 0), nil
+func (r *ResultStorageMock) GetAllResults() ([]domain.ParseResult, error) {
+	return r.results, nil
 }

@@ -6,25 +6,25 @@ import (
 )
 
 type ResultService struct {
-	resultDB     drivenport.ResultDB
-	targetClient drivenport.TargetClient
+	resultStoragePort drivenport.ResultStoragePort
+	targetClientPort  drivenport.TargetClientPort
 }
 
 func NewResultService(
-	resultDB drivenport.ResultDB,
-	targetClient drivenport.TargetClient,
+	resultStorage drivenport.ResultStoragePort,
+	targetClient drivenport.TargetClientPort,
 ) *ResultService {
 	return &ResultService{
-		resultDB, targetClient,
+		resultStorage, targetClient,
 	}
 }
 
 func (s *ResultService) GetResult() (*domain.ParseResult, error) {
-	result, err := s.targetClient.GetParseResult()
+	result, err := s.targetClientPort.GetParseResult()
 	return result, err
 }
 
 func (s *ResultService) GetResultHistory() ([]domain.ParseResult, error) {
-	results, err := s.resultDB.GetAllResults()
+	results, err := s.resultStoragePort.GetAllResults()
 	return results, err
 }
