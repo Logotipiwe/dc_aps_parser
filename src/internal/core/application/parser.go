@@ -3,15 +3,12 @@ package application
 import (
 	"fmt"
 	drivenport "ports-adapters-study/src/internal/core/ports/output"
-	"sync"
 	"time"
 )
 
 type Parser struct {
 	ID                 int
 	stopped            bool
-	stopWg             *sync.WaitGroup
-	isWaiting          bool
 	resultsService     *ResultService
 	resultStorage      drivenport.ResultStoragePort
 	notificationClient drivenport.NotificationPort
@@ -28,8 +25,6 @@ func newParser(
 	return &Parser{
 		ID:                 ID,
 		stopped:            false,
-		stopWg:             &sync.WaitGroup{},
-		isWaiting:          false,
 		isFirstParse:       true,
 		resultsService:     service,
 		notificationClient: notificationAdapter,
@@ -43,7 +38,7 @@ func (p *Parser) init() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
 			p.doParse()
-			p.waitForStopOrTimeout(time.Second * 1)
+			time.Sleep(1 * time.Second)
 			if p.stopped {
 				break
 			}
@@ -52,24 +47,7 @@ func (p *Parser) init() {
 	}()
 }
 
-func (p *Parser) waitForStopOrTimeout(duration time.Duration) {
-	p.stopWg.Add(1)
-	go func() {
-		p.isWaiting = true
-		time.Sleep(duration)
-		if p.isWaiting {
-			p.stopWg.Done()
-			p.isWaiting = false
-		}
-	}()
-	p.stopWg.Wait()
-}
-
 func (p *Parser) Stop() {
-	if !p.stopped && p.isWaiting {
-		p.stopWg.Done()
-	}
-	p.isWaiting = false
 	p.stopped = true
 	fmt.Printf("Parser %d stopped\n", p.ID)
 }
