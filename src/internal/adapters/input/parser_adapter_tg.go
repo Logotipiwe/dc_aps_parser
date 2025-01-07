@@ -33,6 +33,17 @@ func (t *ParserAdapterTg) initListening() {
 		if text == "/start" {
 			return t.api.SendMessageInTg(chatID, "Start")
 		}
+		if text == "/stop" {
+			if t.parserService.HasActiveParser(chatID) {
+				err := t.parserService.StopParser(chatID)
+				if err != nil {
+					return t.api.SendMessageInTg(chatID, "Error stopping parser")
+				}
+				return t.api.SendMessageInTg(chatID, "Stopped")
+			}
+			return t.api.SendMessageInTg(chatID, "No parser found")
+
+		}
 		if text == "/help" {
 			if t.adminService.IsAdmin(chatID) {
 				return t.api.SendMessageInTg(chatID, "Admin help")
@@ -46,6 +57,10 @@ func (t *ParserAdapterTg) initListening() {
 			}
 		}
 		if t.parserService.CanParse(text) {
+			_, err := t.parserService.NewParser(chatID)
+			if err != nil {
+				return t.api.SendMessageInTg(chatID, "Error starting parser")
+			}
 			return t.api.SendMessageInTg(chatID, "Start parsing")
 		}
 		return t.sendUnknownMessage(chatID)

@@ -26,7 +26,7 @@ func NewParserAdapterHttp(
 }
 
 func (c *ParserAdapterHttp) NewParser(ctx *gin.Context) error {
-	parser, err := c.ParserPort.NewParser()
+	parser, err := c.ParserPort.NewParser(0)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (c *ParserAdapterHttp) NewParser(ctx *gin.Context) error {
 
 func (c *ParserAdapterHttp) StopParser(ctx *gin.Context) error {
 	idStr := ctx.Query("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		return err
 	}

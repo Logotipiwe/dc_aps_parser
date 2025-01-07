@@ -8,7 +8,8 @@ import (
 )
 
 type Parser struct {
-	ID                 int
+	ID                 string
+	chatID             int64
 	stopped            bool
 	stopWg             *sync.WaitGroup
 	resultsService     *ResultService
@@ -18,7 +19,8 @@ type Parser struct {
 }
 
 func newParser(
-	ID int,
+	ID string,
+	chatID int64,
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	notificationAdapter drivenport.NotificationPort,
@@ -26,6 +28,7 @@ func newParser(
 	stopWg.Add(1)
 	return &Parser{
 		ID:                 ID,
+		chatID:             chatID,
 		stopped:            false,
 		stopWg:             stopWg,
 		isFirstParse:       true,
@@ -35,7 +38,7 @@ func newParser(
 }
 
 func (p *Parser) init() {
-	_ = p.notificationClient.SendMessage(214583870, fmt.Sprintf("Парсер %d запущен", p.ID))
+	_ = p.notificationClient.SendMessage(p.chatID, "Парсер запущен")
 	go func() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
@@ -63,6 +66,7 @@ func (p *Parser) doParse() {
 	}
 	if p.isFirstParse {
 		fmt.Printf("Parser %d. First parse got %d aps\n", p.ID, len(result.Items))
+		_ = p.notificationClient.SendMessage(p.chatID, fmt.Sprintf("Найдено %d объявлений. Ищу новые...", len(result.Items)))
 		p.isFirstParse = false
 	} else {
 		if p.prevApsNum != len(result.Items) {
@@ -73,7 +77,7 @@ func (p *Parser) doParse() {
 			} else {
 				msg = fmt.Sprintf("Квартир стало меньше на %d", -diff)
 			}
-			_ = p.notificationClient.SendMessage(214583870, msg)
+			_ = p.notificationClient.SendMessage(p.chatID, msg)
 			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, len(result.Items))
 		} else {
 			fmt.Printf("Parser %d. Nothing changed.\n", p.ID)
