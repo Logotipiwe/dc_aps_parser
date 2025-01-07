@@ -16,10 +16,21 @@ func WithError(f func(c *gin.Context) error) func(c *gin.Context) {
 }
 
 func RemoveElement[T comparable](slice []T, element T) []T {
-	for i, v := range slice {
-		if v == element {
-			return append(slice[:i], slice[i+1:]...)
+	result := make([]T, 0, len(slice))
+	for _, v := range slice {
+		if v != element {
+			result = append(result, v)
 		}
 	}
-	return slice
+	return result
+}
+
+func Filter[T any](slice []T, predicate func(T) bool) []T {
+	var result []T
+	for _, v := range slice {
+		if predicate(v) {
+			result = append(result, v)
+		}
+	}
+	return result
 }

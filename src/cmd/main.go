@@ -5,12 +5,14 @@ import (
 	"dc-aps-parser/src/internal/adapters/output"
 	. "dc-aps-parser/src/internal/core/application"
 	. "dc-aps-parser/src/internal/core/ports"
+	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/internal/infrastructure/tg"
 	"github.com/gin-gonic/gin"
 	"os"
 )
 
 func main() {
+	config := infrastructure.NewConfig()
 	botAPI := tg.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
 
 	adapters := OutputPorts{
@@ -22,7 +24,7 @@ func main() {
 	adminService := NewAdminService()
 	app := App{
 		ResultService: resultService,
-		ParserService: NewParserService(resultService, adapters.NotificationPort),
+		ParserService: NewParserService(config, resultService, adapters.NotificationPort),
 		AdminService:  adminService,
 	}
 

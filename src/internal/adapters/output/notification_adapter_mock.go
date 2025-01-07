@@ -6,20 +6,26 @@ import (
 )
 
 type NotificationAdapterMock struct {
-	sentMessages      []string
+	sentMessages      []SentMessageMock
 	wg                *sync.WaitGroup
 	isWaitingForCalls bool
 }
 
+type SentMessageMock struct {
+	ChatID int64
+	Text   string
+	Images []string
+}
+
 func NewNotificationAdapterMock() *NotificationAdapterMock {
 	return &NotificationAdapterMock{
-		sentMessages: make([]string, 0),
+		sentMessages: make([]SentMessageMock, 0),
 		wg:           &sync.WaitGroup{},
 	}
 }
 
-func (n *NotificationAdapterMock) SendMessage(text string) error {
-	n.sentMessages = append(n.sentMessages, text)
+func (n *NotificationAdapterMock) SendMessage(chatID int64, text string) error {
+	n.sentMessages = append(n.sentMessages, SentMessageMock{chatID, text, []string{}})
 	fmt.Printf("Sent mock message: %s\n", text)
 	if n.isWaitingForCalls {
 		n.wg.Done()
@@ -27,7 +33,16 @@ func (n *NotificationAdapterMock) SendMessage(text string) error {
 	return nil
 }
 
-func (n *NotificationAdapterMock) GetSentMessages() []string {
+func (n *NotificationAdapterMock) SendMessageWithImages(chatID int64, text string, images []string) error {
+	n.sentMessages = append(n.sentMessages, SentMessageMock{chatID, text, images})
+	fmt.Printf("Sent mock message with images: %s %v\n", text, images)
+	if n.isWaitingForCalls {
+		n.wg.Done()
+	}
+	return nil
+}
+
+func (n *NotificationAdapterMock) GetSentMessages() []SentMessageMock {
 	return n.sentMessages
 }
 

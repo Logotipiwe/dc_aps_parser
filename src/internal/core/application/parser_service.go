@@ -2,6 +2,7 @@ package application
 
 import (
 	drivenport "dc-aps-parser/src/internal/core/ports/output"
+	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
 	"errors"
 	"github.com/google/uuid"
@@ -10,17 +11,16 @@ import (
 )
 
 type ParserService struct {
+	config          *infrastructure.Config
 	parsers         []*Parser
 	parsersByChatID map[int64]*Parser
 	*ResultService
 	drivenport.NotificationPort
 }
 
-func NewParserService(
-	resultService *ResultService,
-	notificationPort drivenport.NotificationPort,
-) *ParserService {
+func NewParserService(config *infrastructure.Config, resultService *ResultService, notificationPort drivenport.NotificationPort) *ParserService {
 	return &ParserService{
+		config:           config,
 		parsers:          make([]*Parser, 0),
 		parsersByChatID:  make(map[int64]*Parser),
 		ResultService:    resultService,
@@ -36,6 +36,7 @@ func (p *ParserService) NewParser(chatID int64) (*Parser, error) {
 	parser := newParser(
 		uuid.New().String(),
 		chatID,
+		p.config.ParseInterval,
 		wg,
 		p.ResultService,
 		p.NotificationPort,
@@ -60,10 +61,11 @@ func (p *ParserService) StopParser(chatID int64) error {
 }
 
 func (p *ParserService) StopAllParsersSync() {
-	for _, parser := range p.parsers {
+	activeParsers := p.parsers
+	for _, parser := range activeParsers {
 		p.stopParserInternally(parser)
 	}
-	for _, parser := range p.parsers {
+	for _, parser := range activeParsers {
 		parser.stopWg.Wait()
 	}
 }
@@ -71,7 +73,7 @@ func (p *ParserService) StopAllParsersSync() {
 func (p *ParserService) stopParserInternally(parser *Parser) {
 	parser.Stop()
 	delete(p.parsersByChatID, parser.chatID)
-	pkg.RemoveElement(p.parsers, parser)
+	p.parsers = pkg.RemoveElement(p.parsers, parser)
 }
 
 func (p *ParserService) CanParse(url string) bool {

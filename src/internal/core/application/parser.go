@@ -10,6 +10,7 @@ import (
 type Parser struct {
 	ID                 string
 	chatID             int64
+	parseInterval      time.Duration
 	stopped            bool
 	stopWg             *sync.WaitGroup
 	resultsService     *ResultService
@@ -18,17 +19,12 @@ type Parser struct {
 	prevApsNum         int
 }
 
-func newParser(
-	ID string,
-	chatID int64,
-	stopWg *sync.WaitGroup,
-	service *ResultService,
-	notificationAdapter drivenport.NotificationPort,
-) *Parser {
+func newParser(ID string, chatID int64, parseInterval time.Duration, stopWg *sync.WaitGroup, service *ResultService, notificationAdapter drivenport.NotificationPort) *Parser {
 	stopWg.Add(1)
 	return &Parser{
 		ID:                 ID,
 		chatID:             chatID,
+		parseInterval:      parseInterval,
 		stopped:            false,
 		stopWg:             stopWg,
 		isFirstParse:       true,
@@ -43,7 +39,7 @@ func (p *Parser) init() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
 			p.doParse()
-			time.Sleep(20 * time.Second)
+			time.Sleep(p.parseInterval)
 			if p.stopped {
 				break
 			}
