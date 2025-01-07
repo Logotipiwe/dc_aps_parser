@@ -22,9 +22,10 @@ func main() {
 
 	resultService := NewResultService(adapters.TargetClientPort)
 	adminService := NewAdminService()
+	parserNotificationService := NewParserNotificationService(nil, adapters.NotificationPort)
 	app := App{
 		ResultService: resultService,
-		ParserService: NewParserService(config, resultService, adapters.NotificationPort),
+		ParserService: NewParserService(config, resultService, parserNotificationService),
 		AdminService:  adminService,
 	}
 

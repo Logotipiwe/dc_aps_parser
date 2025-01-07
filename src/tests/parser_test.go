@@ -12,27 +12,30 @@ import (
 	"time"
 )
 
-func initAppWithMocks() (application.App, *output.NotificationAdapterMock, *output.TargetClientAdapterMock) {
+func initAppWithMocks() (application.App, *output.NotificationAdapterMock, *output.TargetClientAdapterMock, *infrastructure.Config) {
 	config := &infrastructure.Config{
-		ParseInterval: time.Millisecond * 100,
+		ParseInterval:         time.Millisecond * 100,
+		TgParserLaunchMessage: "Parser launched",
+		TgUserStartMessage:    "Hello!",
 	}
 
 	targetClientAdapterMock := output.NewTargetClientAdapterMock()
 	notificationAdapterMock := output.NewNotificationAdapterMock()
 	resultService := application.NewResultService(targetClientAdapterMock)
+	parserNotificationService := application.NewParserNotificationService(config, notificationAdapterMock)
 	app := application.App{
 		ResultService: resultService,
-		ParserService: application.NewParserService(config, resultService, notificationAdapterMock),
+		ParserService: application.NewParserService(config, resultService, parserNotificationService),
 		AdminService:  application.NewAdminService(),
 	}
-	return app, notificationAdapterMock, targetClientAdapterMock
+	return app, notificationAdapterMock, targetClientAdapterMock, config
 }
 
 func Test_Parser(t *testing.T) {
 	t.Run("Parser creates", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		app, notificationAdapterMock, targetClient := initAppWithMocks()
+		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
 		targetClient.SetResults([]domain.ParseResult{
 			{Items: make([]domain.ParseItem, 0)},
 		})
@@ -47,21 +50,20 @@ func Test_Parser(t *testing.T) {
 
 		sentMessages := notificationAdapterMock.GetSentMessages()
 		assert.Equal(t, 1, len(sentMessages))
-		assert.Equal(t, "Парсер запущен", sentMessages[0].Text)
-		//assert.Equal(t, "Найдено 0 объявлений. Ищу новые...", sentMessages[0].Text)
+		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, int64(1), sentMessages[0].ChatID)
 	})
 
 	t.Run("Parser doesn't stop if not exist", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, _, _ := initAppWithMocks()
+		app, _, _, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 		assert.Error(t, app.ParserService.StopParser(1))
 	})
 
 	t.Run("Many parsers create", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapterMock, targetClient := initAppWithMocks()
+		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
 		targetClient.SetResults([]domain.ParseResult{{Items: make([]domain.ParseItem, 0)}})
 		defer app.ParserService.StopAllParsersSync()
 
@@ -84,7 +86,7 @@ func Test_Parser(t *testing.T) {
 				return msg.ChatID == chatId
 			})
 			assert.Equal(t, 2, len(messagesToChat))
-			assert.Equal(t, "Парсер запущен", messagesToChat[0].Text)
+			assert.Equal(t, config.TgParserLaunchMessage, messagesToChat[0].Text)
 			assert.Equal(t, "Найдено 0 объявлений. Ищу новые...", messagesToChat[1].Text)
 		}
 
@@ -96,7 +98,7 @@ func Test_Parser(t *testing.T) {
 	t.Run("Parser gets init aps count", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		app, notificationAdapterMock, targetClient := initAppWithMocks()
+		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
 		targetClient.SetResults([]domain.ParseResult{
 			{Items: []domain.ParseItem{
 				domain.NewParseItem(1, ""),
@@ -117,7 +119,7 @@ func Test_Parser(t *testing.T) {
 		notificationAdapterMock.WaitForCalls()
 
 		sentMessages := notificationAdapterMock.GetSentMessages()
-		assert.Equal(t, "Парсер запущен", sentMessages[0].Text)
+		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, "Найдено 3 объявлений. Ищу новые...", sentMessages[1].Text)
 	})
 }

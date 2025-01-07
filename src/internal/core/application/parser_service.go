@@ -1,7 +1,6 @@
 package application
 
 import (
-	drivenport "dc-aps-parser/src/internal/core/ports/output"
 	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
 	"errors"
@@ -15,16 +14,20 @@ type ParserService struct {
 	parsers         []*Parser
 	parsersByChatID map[int64]*Parser
 	*ResultService
-	drivenport.NotificationPort
+	ParserNotificationService *ParserNotificationService
 }
 
-func NewParserService(config *infrastructure.Config, resultService *ResultService, notificationPort drivenport.NotificationPort) *ParserService {
+func NewParserService(
+	config *infrastructure.Config,
+	resultService *ResultService,
+	parserNotificationService *ParserNotificationService,
+) *ParserService {
 	return &ParserService{
-		config:           config,
-		parsers:          make([]*Parser, 0),
-		parsersByChatID:  make(map[int64]*Parser),
-		ResultService:    resultService,
-		NotificationPort: notificationPort,
+		config:                    config,
+		parsers:                   make([]*Parser, 0),
+		parsersByChatID:           make(map[int64]*Parser),
+		ResultService:             resultService,
+		ParserNotificationService: parserNotificationService,
 	}
 }
 
@@ -39,7 +42,7 @@ func (p *ParserService) NewParser(chatID int64) (*Parser, error) {
 		p.config.ParseInterval,
 		wg,
 		p.ResultService,
-		p.NotificationPort,
+		p.ParserNotificationService,
 	)
 	parser.init()
 	p.parsers = append(p.parsers, parser)
