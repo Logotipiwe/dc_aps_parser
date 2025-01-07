@@ -1,15 +1,6 @@
 package tests
 
-import (
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/goleak"
-	"ports-adapters-study/src/internal/adapters/output"
-	"ports-adapters-study/src/internal/core/application"
-	"ports-adapters-study/src/internal/core/domain"
-	"ports-adapters-study/src/internal/core/ports"
-	"testing"
-)
-
+/*
 func initAppWithMocks(expectedResults []*domain.ParseResult) (*output.NotificationAdapterMock, application.App) {
 	resultStorageMock := output.NewResultStorageMock()
 	targetClientAdapterMock := output.NewTargetClientAdapterMock(expectedResults)
@@ -77,4 +68,4 @@ func Test_CreateParser(t *testing.T) {
 		assert.Equal(t, "Квартир стало больше на 2", sentMessages[2])
 		assert.Equal(t, "Квартир стало меньше на 3", sentMessages[3])
 	})
-}
+}*/

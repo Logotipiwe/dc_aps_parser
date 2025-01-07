@@ -1,7 +1,8 @@
 package application
 
 import (
-	drivenport "ports-adapters-study/src/internal/core/ports/output"
+	drivenport "dc-aps-parser/src/internal/core/ports/output"
+	"strings"
 	"sync"
 )
 
@@ -29,7 +30,6 @@ func (p *ParserService) NewParser() (*Parser, error) {
 		wg,
 		p.ResultService,
 		p.NotificationPort,
-		p.resultStoragePort,
 	)
 	parser.init()
 	p.parsers = append(p.parsers, parser)
@@ -47,4 +47,8 @@ func (p *ParserService) StopAllParsersSync() {
 	for _, parser := range p.parsers {
 		parser.stopWg.Wait()
 	}
+}
+
+func (p *ParserService) CanParse(url string) bool {
+	return strings.HasPrefix(url, "https://www.avito.ru/js/1/map/items")
 }

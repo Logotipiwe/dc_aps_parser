@@ -16,8 +16,8 @@ func NewParseItem(ID int64, link string) ParseItem {
 	}
 }
 
-func NewParseResult(items []ParseItem) ParseResult {
+func NewParseResult() ParseResult {
 	return ParseResult{
-		Items: items,
+		Items: make([]ParseItem, 0),
 	}
 }

@@ -1,6 +1,6 @@
 package outputport
 
-import "ports-adapters-study/src/internal/core/domain"
+import "dc-aps-parser/src/internal/core/domain"
 
 type ResultStoragePort interface {
 	AddResult(result domain.ParseResult) error
@@ -12,5 +12,6 @@ type TargetClientPort interface {
 }
 
 type NotificationPort interface {
-	SendMessage(text string) error
+	SendMessage(chatID int64, text string) error
+	SendMessageWithImages(chatID int64, text string, images []string) error
 }

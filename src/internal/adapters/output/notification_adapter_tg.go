@@ -1,26 +1,26 @@
 package output
 
 import (
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
-	"os"
+	"dc-aps-parser/src/internal/infrastructure/tg"
 )
 
 type NotificationAdapterTg struct {
-	bot *tgbotapi.BotAPI
+	bot *tg.BotAPI
 }
 
-func (n *NotificationAdapterTg) SendMessage(text string) error {
-	_, err := n.bot.Send(tgbotapi.NewMessage(214583870, text))
-	return err
-}
-
-func NewNotificationAdapterTg() *NotificationAdapterTg {
-	botAPI, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
-	if err != nil {
-		log.Fatal(err)
-	}
+func NewNotificationAdapterTg(
+	botAPI *tg.BotAPI,
+) *NotificationAdapterTg {
 	return &NotificationAdapterTg{
 		botAPI,
 	}
+}
+
+func (n *NotificationAdapterTg) SendMessage(chatID int64, text string) error {
+	err := n.bot.SendMessageInTg(chatID, text)
+	return err
+}
+
+func (n *NotificationAdapterTg) SendMessageWithImages(chatID int64, text string, images []string) error {
+	return n.bot.SendMessageInTgWithImages(chatID, text, images)
 }

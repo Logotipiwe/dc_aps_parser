@@ -1,4 +1,4 @@
-module ports-adapters-study
+module dc-aps-parser
 
 go 1.22
 

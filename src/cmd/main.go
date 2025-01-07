@@ -1,28 +1,45 @@
 package main
 
 import (
+	. "dc-aps-parser/src/internal/adapters/input"
+	"dc-aps-parser/src/internal/adapters/output"
+	. "dc-aps-parser/src/internal/core/application"
+	. "dc-aps-parser/src/internal/core/ports"
+	"dc-aps-parser/src/internal/infrastructure/tg"
 	"github.com/gin-gonic/gin"
-	. "ports-adapters-study/src/internal/adapters"
-	. "ports-adapters-study/src/internal/adapters/input"
-	. "ports-adapters-study/src/internal/core/application"
-	. "ports-adapters-study/src/internal/core/ports"
+	"os"
 )
 
-func InitControllers(app App) *gin.Engine {
-	router := gin.Default()
-	_ = InputPorts{
-		ParserPort: NewParserController(router, app.ParserService),
+func main() {
+	botAPI := tg.NewBotAPI(os.Getenv("TELEGRAM_TOKEN"))
+
+	adapters := OutputPorts{
+		TargetClientPort: output.NewTargetClientWebAdapter(),
+		NotificationPort: output.NewNotificationAdapterTg(botAPI),
 	}
+
+	resultService := NewResultService(adapters.TargetClientPort)
+	adminService := NewAdminService()
+	app := App{
+		ResultService: resultService,
+		ParserService: NewParserService(resultService, adapters.NotificationPort),
+		AdminService:  adminService,
+	}
+
+	router := gin.Default()
+
+	_ = InputAdapters{
+		NewParserAdapterHttp(router, app.ParserService),
+		NewParserAdapterTg(botAPI, app.ParserService, adminService),
+	}
+
 	err := router.Run(":81")
 	if err != nil {
 		panic(err.Error())
 	}
-
-	return router
 }
 
-func main() {
-	println("Started!")
-	app := NewApp(CreateAdapters())
-	_ = InitControllers(app)
+type InputAdapters struct {
+	*ParserAdapterHttp
+	*ParserAdapterTg
 }

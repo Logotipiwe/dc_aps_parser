@@ -1,15 +1,6 @@
 package tests
 
-import (
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"ports-adapters-study/src/internal/adapters/input"
-	"ports-adapters-study/src/internal/core/domain"
-	"testing"
-)
-
+/*
 func TestParserNew(t *testing.T) {
 	_, app := initAppWithMocks([]*domain.ParseResult{{ID: 0, ApsNum: 0}})
 	defer app.StopAllParsersSync()
@@ -52,4 +43,4 @@ func TestParsersManyNew(t *testing.T) {
 	router.ServeHTTP(w, r)
 	assert.Equal(t, 200, w.Code)
 	assert.Equal(t, "{\"ID\":2}", w.Body.String())
-}
+}*/

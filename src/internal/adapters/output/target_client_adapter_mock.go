@@ -1,7 +1,7 @@
 package output
 
 import (
-	"ports-adapters-study/src/internal/core/domain"
+	"dc-aps-parser/src/internal/core/domain"
 	"sync"
 )
 

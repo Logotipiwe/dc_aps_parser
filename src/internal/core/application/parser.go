@@ -1,8 +1,8 @@
 package application
 
 import (
+	drivenport "dc-aps-parser/src/internal/core/ports/output"
 	"fmt"
-	drivenport "ports-adapters-study/src/internal/core/ports/output"
 	"sync"
 	"time"
 )
@@ -12,7 +12,6 @@ type Parser struct {
 	stopped            bool
 	stopWg             *sync.WaitGroup
 	resultsService     *ResultService
-	resultStorage      drivenport.ResultStoragePort
 	notificationClient drivenport.NotificationPort
 	isFirstParse       bool
 	prevApsNum         int
@@ -23,7 +22,6 @@ func newParser(
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	notificationAdapter drivenport.NotificationPort,
-	resultStorage drivenport.ResultStoragePort,
 ) *Parser {
 	stopWg.Add(1)
 	return &Parser{
@@ -33,12 +31,11 @@ func newParser(
 		isFirstParse:       true,
 		resultsService:     service,
 		notificationClient: notificationAdapter,
-		resultStorage:      resultStorage,
 	}
 }
 
 func (p *Parser) init() {
-	_ = p.notificationClient.SendMessage(fmt.Sprintf("Парсер %d запущен", p.ID))
+	_ = p.notificationClient.SendMessage(214583870, fmt.Sprintf("Парсер %d запущен", p.ID))
 	go func() {
 		for {
 			fmt.Printf("Parser %d. Parsing...\n", p.ID)
@@ -76,7 +73,7 @@ func (p *Parser) doParse() {
 			} else {
 				msg = fmt.Sprintf("Квартир стало меньше на %d", -diff)
 			}
-			_ = p.notificationClient.SendMessage(msg)
+			_ = p.notificationClient.SendMessage(214583870, msg)
 			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, len(result.Items))
 		} else {
 			fmt.Printf("Parser %d. Nothing changed.\n", p.ID)
