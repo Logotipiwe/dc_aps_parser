@@ -8,6 +8,7 @@ import (
 type OutputPorts struct {
 	TargetClientPort
 	NotificationPort
+	ParsersStoragePort
 }
 
 type InputPorts struct {

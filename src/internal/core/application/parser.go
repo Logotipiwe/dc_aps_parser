@@ -9,15 +9,18 @@ import (
 
 type Parser struct {
 	ID                        string
-	chatID                    int64
+	ChatID                    int64
 	parseInterval             time.Duration
-	parseLink                 string
+	ParseLink                 string
 	stopped                   bool
 	stopWg                    *sync.WaitGroup
 	resultsService            *ResultService
 	parserNotificationService *ParserNotificationService
 	isFirstParse              bool
 	apsMemory                 map[int64]domain.ParseItem
+	CurrentApsCount           int
+	CurrentBrowserUrl         string
+	isSilentStart             bool
 }
 
 func newParser(
@@ -28,24 +31,28 @@ func newParser(
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	parserNotificationService *ParserNotificationService,
+	isSilentStart bool,
 ) *Parser {
 	stopWg.Add(1)
 	return &Parser{
 		ID:                        ID,
-		chatID:                    chatID,
+		ChatID:                    chatID,
 		parseInterval:             parseInterval,
-		parseLink:                 parseLink,
+		ParseLink:                 parseLink,
 		stopped:                   false,
 		stopWg:                    stopWg,
 		isFirstParse:              true,
 		resultsService:            service,
 		parserNotificationService: parserNotificationService,
 		apsMemory:                 make(map[int64]domain.ParseItem),
+		isSilentStart:             isSilentStart,
 	}
 }
 
 func (p *Parser) init() {
-	_ = p.parserNotificationService.SendParserLaunched(p.chatID)
+	if !p.isSilentStart {
+		_ = p.parserNotificationService.SendParserLaunched(p.ChatID)
+	}
 	go func() {
 		for {
 			fmt.Printf("Parser %v. Parsing...\n", p.ID)
@@ -66,7 +73,7 @@ func (p *Parser) Stop() {
 }
 
 func (p *Parser) doParse() {
-	result, err := p.resultsService.GetResult(p.parseLink)
+	result, err := p.resultsService.GetResult(p.ParseLink)
 	if err != nil {
 		return
 	}
@@ -75,13 +82,24 @@ func (p *Parser) doParse() {
 		if _, has := p.apsMemory[item.ID]; !has {
 			p.apsMemory[item.ID] = item
 			if !p.isFirstParse {
-				_ = p.parserNotificationService.SendNewApInfo(p.chatID, item)
+				_ = p.parserNotificationService.SendNewApInfo(p.ChatID, item)
 			}
 		}
 	}
 
 	if p.isFirstParse {
-		_ = p.parserNotificationService.SendInitialApsCount(p.chatID, len(p.apsMemory))
+		if !p.isSilentStart {
+			_ = p.parserNotificationService.SendInitialApsCount(p.ChatID, len(p.apsMemory))
+		}
 		p.isFirstParse = false
+	}
+	p.CurrentApsCount = len(result.Items)
+	p.CurrentBrowserUrl = result.BrowserUrl
+}
+
+func (p *Parser) toData() domain.ParserData {
+	return domain.ParserData{
+		ChatID: p.ChatID,
+		Link:   p.ParseLink,
 	}
 }

@@ -1,7 +1,8 @@
 package domain
 
 type ParseResult struct {
-	Items []ParseItem
+	BrowserUrl string
+	Items      []ParseItem
 }
 
 type ParseItem struct {

@@ -7,66 +7,79 @@ import (
 )
 
 type ParserAdapterTg struct {
-	api           *tg.BotAPI
-	parserService *application.ParserService
-	adminService  *application.AdminService
+	api                       *tg.BotAPI
+	parserService             *application.ParserService
+	adminService              *application.AdminService
+	parserNotificationService *application.ParserNotificationService
 }
 
 func NewParserAdapterTg(
 	api *tg.BotAPI,
 	parserService *application.ParserService,
 	adminService *application.AdminService,
+	parserNotificationService *application.ParserNotificationService,
 ) *ParserAdapterTg {
 	adapterTg := &ParserAdapterTg{
-		api:           api,
-		parserService: parserService,
-		adminService:  adminService,
+		api:                       api,
+		parserService:             parserService,
+		adminService:              adminService,
+		parserNotificationService: parserNotificationService,
 	}
-	adapterTg.initListening()
 	return adapterTg
 }
 
-func (t *ParserAdapterTg) initListening() {
-	t.api.ReceiveMessages(func(update tgbotapi.Update) error {
-		text := update.Message.Text
-		chatID := update.Message.Chat.ID
-		if text == "/start" {
-			return t.api.SendMessageInTg(chatID, "Start")
-		}
-		if text == "/stop" {
-			if t.parserService.HasActiveParser(chatID) {
-				err := t.parserService.StopParser(chatID)
-				if err != nil {
-					return t.api.SendMessageInTg(chatID, "Error stopping parser")
-				}
-				return t.api.SendMessageInTg(chatID, "Stopped")
-			}
-			return t.api.SendMessageInTg(chatID, "No parser found")
-
-		}
-		if text == "/help" {
-			if t.adminService.IsAdmin(chatID) {
-				return t.api.SendMessageInTg(chatID, "Admin help")
-			} else {
-				return t.api.SendMessageInTg(chatID, "Help")
-			}
-		}
-		if text == "/info" {
-			if t.adminService.IsAdmin(chatID) {
-				return t.api.SendMessageInTg(chatID, "Admin info")
-			}
-		}
-		if t.parserService.CanParse(text) {
-			_, err := t.parserService.NewParser(chatID, text)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-		return t.sendUnknownMessage(chatID)
-	})
+func (t *ParserAdapterTg) InitListening() {
+	t.api.ReceiveMessages(t.HandleTgUpdate)
 }
 
-func (t *ParserAdapterTg) sendUnknownMessage(chatID int64) error {
-	return t.api.SendMessageInTg(chatID, "Unknown")
+func (t *ParserAdapterTg) HandleTgUpdate(update tgbotapi.Update) error {
+	text := update.Message.Text
+	chatID := update.Message.Chat.ID
+	if text == "/start" {
+		return t.parserNotificationService.SendUserStartMessage(chatID)
+	}
+	if text == "/stop" {
+		if t.parserService.HasActiveParser(chatID) {
+			err := t.parserService.StopParser(chatID)
+			if err != nil {
+				return t.parserNotificationService.SendErrorStoppingParser(chatID)
+			}
+			return t.parserNotificationService.SendParserStopped(chatID)
+		}
+		return t.parserNotificationService.SendParserAlreadyStopped(chatID)
+
+	}
+	if text == "/help" {
+		if t.adminService.IsAdmin(chatID) {
+			return t.parserNotificationService.SendAdminHelp(chatID)
+		} else {
+			return t.parserNotificationService.SendUserHelp(chatID)
+		}
+	}
+	if text == "/info" {
+		if t.adminService.IsAdmin(chatID) {
+			return t.parserNotificationService.SendAdminInfo(chatID, t.parserService.GetActiveParsers())
+		}
+	}
+	if text == "/status" {
+		if t.parserService.HasActiveParser(chatID) {
+			return t.parserNotificationService.SendParserStatus(chatID)
+		} else {
+			return t.parserNotificationService.SendStoppedParserStatus(chatID)
+		}
+	}
+	if t.parserService.CanParse(text) {
+		if t.parserService.HasActiveParser(chatID) {
+			err := t.parserService.StopParser(chatID)
+			if err != nil {
+				return t.parserNotificationService.SendErrorStoppingParser(chatID)
+			}
+		}
+		_, err := t.parserService.NewParser(chatID, text, false)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return t.parserNotificationService.SendUnknownCommand(chatID)
 }

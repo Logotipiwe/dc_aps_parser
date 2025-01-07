@@ -34,6 +34,7 @@ func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseR
 	}
 	result := domain.NewParseResult()
 	for i, answer := range answers {
+		result.BrowserUrl = targetUrl.Host + answer.Url
 		for _, answerItem := range answer.Items {
 			result.Items = append(result.Items, domain.NewParseItem(
 				answerItem.ID, targetUrl.Host+answerItem.UrlPath))
@@ -118,6 +119,7 @@ func setQueryParam(url *url.URL, key string, value string) {
 }
 
 type TargetAnswer struct {
+	Url        string             `json:"url"`
 	Items      []TargetAnswerItem `json:"items"`
 	TotalCount int                `json:"totalCount"`
 }
