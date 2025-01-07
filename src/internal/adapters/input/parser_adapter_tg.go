@@ -57,11 +57,11 @@ func (t *ParserAdapterTg) initListening() {
 			}
 		}
 		if t.parserService.CanParse(text) {
-			_, err := t.parserService.NewParser(chatID)
+			_, err := t.parserService.NewParser(chatID, text)
 			if err != nil {
-				return t.api.SendMessageInTg(chatID, "Error starting parser")
+				return err
 			}
-			return t.api.SendMessageInTg(chatID, "Start parsing")
+			return nil
 		}
 		return t.sendUnknownMessage(chatID)
 	})

@@ -26,7 +26,7 @@ func NewParserAdapterHttp(
 }
 
 func (c *ParserAdapterHttp) NewParser(ctx *gin.Context) error {
-	parser, err := c.ParserPort.NewParser(0)
+	parser, err := c.ParserPort.NewParser(0, "")
 	if err != nil {
 		return err
 	}

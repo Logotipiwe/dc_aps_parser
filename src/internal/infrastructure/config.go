@@ -16,7 +16,7 @@ type Config struct {
 func NewConfig() *Config {
 	parseIntervalMs, err := strconv.ParseInt(os.Getenv("PARSER_INTERVAL_MS"), 10, 64)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error getting parser interval\n", err)
 	}
 	return &Config{
 		ParseInterval:         time.Duration(parseIntervalMs) * time.Millisecond,

@@ -12,8 +12,6 @@ import (
 	"strconv"
 )
 
-var hardcodeLink = "https://www.avito.ru/js/1/map/items?categoryId=24&locationId=653240&correctorMode=0&page=1&map=eyJzZWFyY2hBcmVhIjp7ImxhdEJvdHRvbSI6NTkuOTAwNzY4NjgzMTQyNzE1LCJsYXRUb3AiOjU5LjkxMzMzNTE1NzYxNjI5LCJsb25MZWZ0IjozMC40NTA1NjA4ODQ0NTYzNywibG9uUmlnaHQiOjMwLjUzODk2NjQ5MzU4NzIxOH0sInpvb20iOjE1fQ%3D%3D&params%5B201%5D=1060&params%5B504%5D=5256&params%5B550%5D%5B0%5D=5705&params%5B550%5D%5B1%5D=5704&params%5B550%5D%5B2%5D=5703&params%5B550%5D%5B3%5D=5702&verticalCategoryId=1&rootCategoryId=4&localPriority=0&disabledFilters%5Bids%5D%5B0%5D=byTitle&disabledFilters%5Bslugs%5D%5B0%5D=bt&subscription%5Bvisible%5D=true&subscription%5BisShowSavedTooltip%5D=false&subscription%5BisErrorSaved%5D=false&subscription%5BisAuthenticated%5D=true&searchArea%5BlatBottom%5D=59.900768683142715&searchArea%5BlonLeft%5D=30.45056088445637&searchArea%5BlatTop%5D=59.91333515761629&searchArea%5BlonRight%5D=30.538966493587218&viewPort%5Bwidth%5D=2060&viewPort%5Bheight%5D=584&limit=10&countAndItemsOnly=1"
-
 // limit of page size is 50
 var pageSize = 50
 
@@ -24,16 +22,15 @@ func NewTargetClientWebAdapter() *TargetClientAdapterWeb {
 	return &TargetClientAdapterWeb{}
 }
 
-func (k *TargetClientAdapterWeb) GetParseResult() (domain.ParseResult, error) {
-	log.Println("Getting result...")
-	targetUrl, err := url.Parse(hardcodeLink)
+func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseResult, error) {
+	targetUrl, err := url.Parse(parseLink)
 	if err != nil {
-		return domain.NewParseResult(), err
+		return domain.ParseResult{}, err
 	}
 	setQueryParam(targetUrl, "limit", strconv.Itoa(pageSize))
 	answers, err := k.doRequestPages(targetUrl, pageSize)
 	if err != nil {
-		return domain.NewParseResult(), err
+		return domain.ParseResult{}, err
 	}
 	result := domain.NewParseResult()
 	for i, answer := range answers {
@@ -53,6 +50,7 @@ func (k *TargetClientAdapterWeb) doRequestPages(link *url.URL, pageSize int) ([]
 
 	setPage(link, page)
 	targetAnswer, err := k.doRequest(link)
+	log.Println("Requesting page...")
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +61,7 @@ func (k *TargetClientAdapterWeb) doRequestPages(link *url.URL, pageSize int) ([]
 	for range requestsCount {
 		page = page + 1
 		setPage(link, page)
+		log.Printf("Requesting %d page...\n", page)
 		targetAnswer, err = k.doRequest(link)
 		if err != nil {
 			return nil, err

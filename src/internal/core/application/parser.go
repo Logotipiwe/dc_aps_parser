@@ -1,6 +1,7 @@
 package application
 
 import (
+	"dc-aps-parser/src/internal/core/domain"
 	"fmt"
 	"sync"
 	"time"
@@ -10,17 +11,19 @@ type Parser struct {
 	ID                        string
 	chatID                    int64
 	parseInterval             time.Duration
+	parseLink                 string
 	stopped                   bool
 	stopWg                    *sync.WaitGroup
 	resultsService            *ResultService
 	parserNotificationService *ParserNotificationService
 	isFirstParse              bool
-	prevApsNum                int
+	apsMemory                 map[int64]domain.ParseItem
 }
 
 func newParser(
 	ID string,
 	chatID int64,
+	parseLink string,
 	parseInterval time.Duration,
 	stopWg *sync.WaitGroup,
 	service *ResultService,
@@ -31,11 +34,13 @@ func newParser(
 		ID:                        ID,
 		chatID:                    chatID,
 		parseInterval:             parseInterval,
+		parseLink:                 parseLink,
 		stopped:                   false,
 		stopWg:                    stopWg,
 		isFirstParse:              true,
 		resultsService:            service,
 		parserNotificationService: parserNotificationService,
+		apsMemory:                 make(map[int64]domain.ParseItem),
 	}
 }
 
@@ -43,14 +48,14 @@ func (p *Parser) init() {
 	_ = p.parserNotificationService.SendParserLaunched(p.chatID)
 	go func() {
 		for {
-			fmt.Printf("Parser %d. Parsing...\n", p.ID)
+			fmt.Printf("Parser %v. Parsing...\n", p.ID)
 			p.doParse()
 			time.Sleep(p.parseInterval)
 			if p.stopped {
 				break
 			}
 		}
-		fmt.Printf("Parser %d finally stopped\n", p.ID)
+		fmt.Printf("Parser %v finally stopped\n", p.ID)
 		p.stopWg.Done()
 	}()
 }
@@ -61,24 +66,22 @@ func (p *Parser) Stop() {
 }
 
 func (p *Parser) doParse() {
-	result, err := p.resultsService.GetResult()
+	result, err := p.resultsService.GetResult(p.parseLink)
 	if err != nil {
-		fmt.Printf("Parser %d. Get result error: %s\n", p.ID, err)
 		return
 	}
-	if p.isFirstParse {
-		fmt.Printf("Parser %d. First parse got %d aps\n", p.ID, len(result.Items))
-		_ = p.parserNotificationService.SendInitialApsCount(p.chatID, len(result.Items))
-		p.isFirstParse = false
-	} else {
-		if p.prevApsNum != len(result.Items) {
-			diff := len(result.Items) - p.prevApsNum
-			_ = p.parserNotificationService.SendApsCountChange(p.chatID, diff)
-			fmt.Printf("Parser %d. Num diff: %d. Total now: %d\n", p.ID, diff, len(result.Items))
-		} else {
-			fmt.Printf("Parser %d. Nothing changed.\n", p.ID)
+
+	for _, item := range result.Items {
+		if _, has := p.apsMemory[item.ID]; !has {
+			p.apsMemory[item.ID] = item
+			if !p.isFirstParse {
+				_ = p.parserNotificationService.SendNewApInfo(p.chatID, item)
+			}
 		}
 	}
 
-	p.prevApsNum = len(result.Items)
+	if p.isFirstParse {
+		_ = p.parserNotificationService.SendInitialApsCount(p.chatID, len(p.apsMemory))
+		p.isFirstParse = false
+	}
 }

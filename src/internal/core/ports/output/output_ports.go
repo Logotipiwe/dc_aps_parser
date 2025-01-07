@@ -8,7 +8,7 @@ type ResultStoragePort interface {
 }
 
 type TargetClientPort interface {
-	GetParseResult() (domain.ParseResult, error)
+	GetParseResult(parseLink string) (domain.ParseResult, error)
 }
 
 type NotificationPort interface {

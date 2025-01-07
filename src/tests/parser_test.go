@@ -3,7 +3,6 @@ package tests
 import (
 	"dc-aps-parser/src/internal/adapters/output"
 	"dc-aps-parser/src/internal/core/application"
-	"dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
 	"github.com/stretchr/testify/assert"
@@ -31,17 +30,14 @@ func initAppWithMocks() (application.App, *output.NotificationAdapterMock, *outp
 	return app, notificationAdapterMock, targetClientAdapterMock, config
 }
 
-func Test_Parser(t *testing.T) {
+func Test_ParserLaunch(t *testing.T) {
 	t.Run("Parser creates", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
-		targetClient.SetResults([]domain.ParseResult{
-			{Items: make([]domain.ParseItem, 0)},
-		})
+		app, notificationAdapterMock, _, config := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		_, err := app.ParserService.NewParser(1)
+		_, err := app.ParserService.NewParser(1, "")
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
@@ -63,17 +59,16 @@ func Test_Parser(t *testing.T) {
 
 	t.Run("Many parsers create", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
-		targetClient.SetResults([]domain.ParseResult{{Items: make([]domain.ParseItem, 0)}})
+		app, notificationAdapterMock, _, config := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
 		notificationAdapterMock.SetCalls(6)
 
-		_, err := app.ParserService.NewParser(1)
+		_, err := app.ParserService.NewParser(1, "")
 		assert.NoError(t, err)
-		_, err = app.ParserService.NewParser(2)
+		_, err = app.ParserService.NewParser(2, "")
 		assert.NoError(t, err)
-		_, err = app.ParserService.NewParser(3)
+		_, err = app.ParserService.NewParser(3, "")
 		assert.NoError(t, err)
 
 		notificationAdapterMock.WaitForCalls()
@@ -99,17 +94,11 @@ func Test_Parser(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
 		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
-		targetClient.SetResults([]domain.ParseResult{
-			{Items: []domain.ParseItem{
-				domain.NewParseItem(1, ""),
-				domain.NewParseItem(2, ""),
-				domain.NewParseItem(3, ""),
-			}},
-		})
+		targetClient.SetResults([]int{3})
 		defer app.ParserService.StopAllParsersSync()
 
 		notificationAdapterMock.SetCalls(2)
-		_, err := app.ParserService.NewParser(1)
+		_, err := app.ParserService.NewParser(1, "")
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
@@ -121,5 +110,68 @@ func Test_Parser(t *testing.T) {
 		sentMessages := notificationAdapterMock.GetSentMessages()
 		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, "Найдено 3 объявлений. Ищу новые...", sentMessages[1].Text)
+	})
+}
+
+func TestParserWorks(t *testing.T) {
+	t.Run("Parser detects new ap", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		targetClient.SetResults([]int{10, 10, 10, 11})
+		notificationAdapter.SetCalls(3)
+		_, err := app.ParserService.NewParser(1, "")
+		assert.NoError(t, err)
+		notificationAdapter.WaitForCalls()
+
+		sentMessages := notificationAdapter.GetSentMessages()
+		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
+	})
+
+	t.Run("Parser detects many new aps", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		targetClient.SetResults([]int{10, 10, 11, 11, 12})
+		notificationAdapter.SetCalls(4)
+		_, err := app.ParserService.NewParser(1, "")
+		assert.NoError(t, err)
+		notificationAdapter.WaitForCalls()
+
+		sentMessages := notificationAdapter.GetSentMessages()
+		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
+		assert.Equal(t, "Новое объявление link_12", sentMessages[3].Text)
+	})
+
+	t.Run("Parser detects many new aps at one time", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		targetClient.SetResults([]int{10, 14})
+		notificationAdapter.SetCalls(6)
+		_, err := app.ParserService.NewParser(1, "")
+		assert.NoError(t, err)
+		notificationAdapter.WaitForCalls()
+
+		sentMessages := notificationAdapter.GetSentMessages()
+		assert.Equal(t, 6, len(sentMessages))
+	})
+
+	t.Run("Parser ignores hiding and showing some ap", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		targetClient.SetResults([]int{10, 9, 10, 11})
+		notificationAdapter.SetCalls(3)
+		_, err := app.ParserService.NewParser(1, "")
+		assert.NoError(t, err)
+		notificationAdapter.WaitForCalls()
+
+		sentMessages := notificationAdapter.GetSentMessages()
+		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
 	})
 }

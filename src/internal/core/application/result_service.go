@@ -17,6 +17,6 @@ func NewResultService(
 	}
 }
 
-func (s *ResultService) GetResult() (domain.ParseResult, error) {
-	return s.targetClientPort.GetParseResult()
+func (s *ResultService) GetResult(parseLink string) (domain.ParseResult, error) {
+	return s.targetClientPort.GetParseResult(parseLink)
 }

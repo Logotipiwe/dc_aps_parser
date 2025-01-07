@@ -31,7 +31,7 @@ func NewParserService(
 	}
 }
 
-func (p *ParserService) NewParser(chatID int64) (*Parser, error) {
+func (p *ParserService) NewParser(chatID int64, parseLink string) (*Parser, error) {
 	if p.parsersByChatID[chatID] != nil {
 		return nil, errors.New("parser already exists")
 	}
@@ -39,6 +39,7 @@ func (p *ParserService) NewParser(chatID int64) (*Parser, error) {
 	parser := newParser(
 		uuid.New().String(),
 		chatID,
+		parseLink,
 		p.config.ParseInterval,
 		wg,
 		p.ResultService,
