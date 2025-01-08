@@ -56,5 +56,5 @@ jobs:
           export IMAGE=${{ env.IMAGE }}
           export M_TOKEN=${{ env.M_TOKEN }}
           
-          docker-compose -f /kuber/aps_parser/deploy/aps_parser.yml down --remove-orphans
-          docker-compose -f /kuber/aps_parser/deploy/aps_parser.yml up -d
+          docker-compose -f /kuber/aps_parser/aps_parser.yml down --remove-orphans
+          docker-compose -f /kuber/aps_parser/aps_parser.yml up -d
