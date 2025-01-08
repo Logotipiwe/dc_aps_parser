@@ -19,8 +19,8 @@ func (p *ParserStorageAdapterMock) SaveParser(parserData domain.ParserData) erro
 	return nil
 }
 
-func (p *ParserStorageAdapterMock) RemoveParser(parserData domain.ParserData) error {
-	delete(p.parsers, parserData.ChatID)
+func (p *ParserStorageAdapterMock) RemoveParser(chatID int64) error {
+	delete(p.parsers, chatID)
 	return nil
 }
 

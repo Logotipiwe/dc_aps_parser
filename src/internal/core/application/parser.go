@@ -9,10 +9,9 @@ import (
 )
 
 type Parser struct {
-	ID                        string
-	ChatID                    int64
+	ID string
+	domain.ParserParams
 	parseInterval             time.Duration
-	ParseLink                 string
 	stopped                   bool
 	stopWg                    *sync.WaitGroup
 	resultsService            *ResultService
@@ -21,40 +20,35 @@ type Parser struct {
 	apsMemory                 map[int64]domain.ParseItem
 	CurrentApsCount           int
 	CurrentBrowserUrl         string
-	isCreatedFromStorage      bool
 }
 
 func newParser(
 	ID string,
-	chatID int64,
-	parseLink string,
+	params domain.ParserParams,
 	parseInterval time.Duration,
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	parserNotificationService *ParserNotificationService,
-	isCreatedFromStorage bool,
 ) *Parser {
 	stopWg.Add(1)
 	return &Parser{
 		ID:                        ID,
-		ChatID:                    chatID,
+		ParserParams:              params,
 		parseInterval:             parseInterval,
-		ParseLink:                 parseLink,
 		stopped:                   false,
 		stopWg:                    stopWg,
 		isFirstParse:              true,
 		resultsService:            service,
 		parserNotificationService: parserNotificationService,
 		apsMemory:                 make(map[int64]domain.ParseItem),
-		isCreatedFromStorage:      isCreatedFromStorage,
 	}
 }
 
 func (p *Parser) init() {
-	if !p.isCreatedFromStorage {
+	if !p.IsStartedFromStorage {
 		_ = p.parserNotificationService.SendParserLaunched(p.ChatID)
 	}
-	if p.isCreatedFromStorage {
+	if p.IsStartedFromStorage {
 		log.Printf("New parser %v created from storage\n", p.ID)
 	} else {
 		log.Printf("New parser %v created from user\n", p.ID)
@@ -94,18 +88,11 @@ func (p *Parser) doParse() {
 	}
 
 	if p.isFirstParse {
-		if !p.isCreatedFromStorage {
+		if !p.IsStartedFromStorage {
 			_ = p.parserNotificationService.SendInitialApsCount(p.ChatID, len(p.apsMemory))
 		}
 		p.isFirstParse = false
 	}
 	p.CurrentApsCount = len(result.Items)
 	p.CurrentBrowserUrl = result.BrowserUrl
-}
-
-func (p *Parser) toData() domain.ParserData {
-	return domain.ParserData{
-		ChatID: p.ChatID,
-		Link:   p.ParseLink,
-	}
 }

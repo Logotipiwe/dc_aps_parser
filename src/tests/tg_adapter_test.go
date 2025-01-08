@@ -4,6 +4,7 @@ import (
 	"dc-aps-parser/src/internal/adapters/input"
 	"dc-aps-parser/src/internal/adapters/output"
 	"dc-aps-parser/src/internal/core/application"
+	. "dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/pkg"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -16,12 +17,15 @@ func createTgAdapter(app application.App) *input.ParserAdapterTg {
 	return input.NewParserAdapterTg(nil, app.ParserService, app.AdminService, app.ParserNotificationService)
 }
 
-func newUpdate(chatID int64, text string) tgbotapi.Update {
+func newUpdate(chatID int64, text string, username string) tgbotapi.Update {
 	return tgbotapi.Update{
 		Message: &tgbotapi.Message{
 			Text: text,
 			Chat: &tgbotapi.Chat{
 				ID: chatID,
+			},
+			From: &tgbotapi.User{
+				UserName: username,
 			},
 		},
 	}
@@ -32,7 +36,7 @@ func TestCommands(t *testing.T) {
 		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
-		err := adapterTg.HandleTgUpdate(newUpdate(1, "/start"))
+		err := adapterTg.HandleTgUpdate(newUpdate(1, "/start", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 1, len(sentMessages))
@@ -44,7 +48,7 @@ func TestCommands(t *testing.T) {
 			app, adapterMocks, config := initAppWithMocks()
 			adapterTg := createTgAdapter(app)
 
-			err := adapterTg.HandleTgUpdate(newUpdate(1, "/stop"))
+			err := adapterTg.HandleTgUpdate(newUpdate(1, "/stop", ""))
 			assert.Nil(t, err)
 			sentMessages := adapterMocks.notification.GetSentMessages()
 			assert.Equal(t, 1, len(sentMessages))
@@ -56,10 +60,10 @@ func TestCommands(t *testing.T) {
 			adapterTg := createTgAdapter(app)
 			defer app.ParserService.StopAllParsersSync()
 
-			_, err := app.ParserService.LaunchParser(1, "some", false)
+			_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, ParseLink: "some", UserName: "username"})
 			assert.Nil(t, err)
 
-			err = adapterTg.HandleTgUpdate(newUpdate(1, "/stop"))
+			err = adapterTg.HandleTgUpdate(newUpdate(1, "/stop", ""))
 			assert.Nil(t, err)
 			sentMessages := adapterMocks.notification.GetSentMessages()
 			assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
@@ -71,7 +75,7 @@ func TestCommands(t *testing.T) {
 		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
-		err := adapterTg.HandleTgUpdate(newUpdate(1, "/help"))
+		err := adapterTg.HandleTgUpdate(newUpdate(1, "/help", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgUserHelpMessage, sentMessages[0].Text)
@@ -80,7 +84,7 @@ func TestCommands(t *testing.T) {
 		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
-		err := adapterTg.HandleTgUpdate(newUpdate(config.TgAdminChatId, "/help"))
+		err := adapterTg.HandleTgUpdate(newUpdate(config.TgAdminChatId, "/help", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgAdminHelpMessage, sentMessages[0].Text)
@@ -94,10 +98,10 @@ func TestCommands(t *testing.T) {
 		adapterTg := createTgAdapter(app)
 		defer app.ParserService.StopAllParsersSync()
 
-		_, err := app.ParserService.LaunchParser(1, "some", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, ParseLink: "some", UserName: "username"})
 		assert.Nil(t, err)
 
-		err = adapterTg.HandleTgUpdate(newUpdate(1, "/status"))
+		err = adapterTg.HandleTgUpdate(newUpdate(1, "/status", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
@@ -108,7 +112,7 @@ func TestCommands(t *testing.T) {
 		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
-		err := adapterTg.HandleTgUpdate(newUpdate(1, "/status"))
+		err := adapterTg.HandleTgUpdate(newUpdate(1, "/status", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgStoppedParserStatusMessage, sentMessages[0].Text)
@@ -123,7 +127,7 @@ func TestEnablingParser(t *testing.T) {
 		adapterMocks.targetClient.SetResults([]int{4})
 		defer app.ParserService.StopAllParsersSync()
 
-		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://other.site"))
+		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://other.site", ""))
 		assert.Nil(t, err)
 
 		sentMessages := adapterMocks.notification.GetSentMessages()
@@ -139,7 +143,7 @@ func TestEnablingParser(t *testing.T) {
 		adapterMocks.notification.SetCalls(2)
 		defer app.ParserService.StopAllParsersSync()
 
-		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://www.avito.ru/js/1/map/items?kek"))
+		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://www.avito.ru/js/1/map/items?kek", ""))
 		assert.Nil(t, err)
 
 		adapterMocks.notification.WaitForCalls()

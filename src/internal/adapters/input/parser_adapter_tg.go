@@ -72,13 +72,12 @@ func (t *ParserAdapterTg) HandleTgUpdate(update tgbotapi.Update) error {
 		}
 	}
 	if t.parserService.CanParse(text) {
-		if t.parserService.HasActiveParser(chatID) {
-			err := t.parserService.StopParser(chatID)
-			if err != nil {
-				return t.parserNotificationService.SendErrorStoppingParser(chatID)
-			}
-		}
-		_, err := t.parserService.LaunchParser(chatID, text, false)
+		_, err := t.parserService.LaunchParser(domain.ParserParams{
+			ChatID:               chatID,
+			ParseLink:            text,
+			IsStartedFromStorage: false,
+			UserName:             "@" + update.Message.From.UserName,
+		})
 		if err != nil {
 			var notAllowedErr domain.NotAllowedError
 			if errors.As(err, &notAllowedErr) {

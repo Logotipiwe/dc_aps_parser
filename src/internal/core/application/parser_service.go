@@ -43,39 +43,40 @@ func NewParserService(
 	return p
 }
 
-func (p *ParserService) LaunchParser(
-	chatID int64,
-	parseLink string,
-	isStartedFromStorage bool,
-) (*Parser, error) {
-	if p.parsersByChatID[chatID] != nil {
-		return nil, errors.New("parser already exists")
-	}
-
-	err := p.checkIfApsNumAllowed(chatID, parseLink)
+func (p *ParserService) LaunchParser(params domain.ParserParams) (*Parser, error) {
+	err := p.checkIfApsNumAllowed(params.ChatID, params.ParseLink)
 	if err != nil {
 		return nil, err
 	}
 
+	if p.HasActiveParser(params.ChatID) {
+		err = p.StopParser(params.ChatID)
+		if err != nil {
+			return nil, p.ParserNotificationService.SendErrorStoppingParser(params.ChatID)
+		}
+	}
+
 	parser := newParser(
 		uuid.New().String(),
-		chatID,
-		parseLink,
+		params,
 		p.config.ParseInterval,
 		new(sync.WaitGroup),
 		p.ResultService,
 		p.ParserNotificationService,
-		isStartedFromStorage,
 	)
-	if !isStartedFromStorage {
-		err = p.parsersStorage.SaveParser(parser.toData())
+	if !params.IsStartedFromStorage {
+		err = p.parsersStorage.SaveParser(domain.ParserData{
+			ChatID:   params.ChatID,
+			Link:     params.ParseLink,
+			UserName: params.UserName,
+		})
 		if err != nil {
 			return nil, err
 		}
 	}
 	parser.init()
 	p.parsers = append(p.parsers, parser)
-	p.parsersByChatID[chatID] = parser
+	p.parsersByChatID[params.ChatID] = parser
 	return parser, nil
 }
 
@@ -103,7 +104,7 @@ func (p *ParserService) StopParser(chatID int64) error {
 	if parser == nil {
 		return errors.New("parser does not exist")
 	}
-	err := p.parsersStorage.RemoveParser(parser.toData())
+	err := p.parsersStorage.RemoveParser(parser.ChatID)
 	if err != nil {
 		return err
 	}
@@ -141,7 +142,12 @@ func (p *ParserService) initParsersFromStorage() {
 		log.Fatal(err)
 	}
 	for _, parserData := range parsersData {
-		_, err := p.LaunchParser(parserData.ChatID, parserData.Link, true)
+		_, err := p.LaunchParser(domain.ParserParams{
+			ChatID:               parserData.ChatID,
+			ParseLink:            parserData.Link,
+			IsStartedFromStorage: true,
+			UserName:             parserData.UserName,
+		})
 		if err != nil {
 			log.Println("Error starting parser for chat " + strconv.FormatInt(parserData.ChatID, 10))
 			log.Println(err)

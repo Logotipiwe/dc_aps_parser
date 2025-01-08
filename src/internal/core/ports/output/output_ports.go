@@ -21,7 +21,7 @@ type NotificationPort interface {
 
 type ParsersStoragePort interface {
 	SaveParser(parser domain.ParserData) error
-	RemoveParser(parser domain.ParserData) error
+	RemoveParser(chatID int64) error
 	GetParsers() ([]domain.ParserData, error)
 }
 

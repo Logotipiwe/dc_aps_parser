@@ -3,8 +3,9 @@ package domain
 import "errors"
 
 type ParserData struct {
-	ChatID int64
-	Link   string
+	ChatID   int64
+	Link     string
+	UserName string
 }
 
 type NotAllowedError struct {
@@ -19,4 +20,11 @@ func NewNotAllowedError(requested, allowed int) NotAllowedError {
 		RequestedNum: requested,
 		AllowedNum:   allowed,
 	}
+}
+
+type ParserParams struct {
+	ChatID               int64
+	ParseLink            string
+	IsStartedFromStorage bool
+	UserName             string
 }

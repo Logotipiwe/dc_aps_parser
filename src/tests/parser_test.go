@@ -3,7 +3,7 @@ package tests
 import (
 	"dc-aps-parser/src/internal/adapters/output"
 	"dc-aps-parser/src/internal/core/application"
-	"dc-aps-parser/src/internal/core/domain"
+	. "dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
 	"fmt"
@@ -66,7 +66,7 @@ func (a *AppBuilder) WithDefaultMocks() *AppBuilder {
 	return a.WithConfigMock().WithAdapterMocks()
 }
 
-func (a *AppBuilder) WithParserStorage(parsers []domain.ParserData) *AppBuilder {
+func (a *AppBuilder) WithParserStorage(parsers []ParserData) *AppBuilder {
 	a.parserStorage.SetParsers(parsers)
 	return a
 }
@@ -107,7 +107,7 @@ func Test_ParserLaunch(t *testing.T) {
 		app, adapterMocks, config := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
@@ -134,11 +134,11 @@ func Test_ParserLaunch(t *testing.T) {
 
 		adapterMocks.notification.SetCalls(6)
 
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
-		_, err = app.ParserService.LaunchParser(2, "", false)
+		_, err = app.ParserService.LaunchParser(ParserParams{ChatID: 2, UserName: "username"})
 		assert.NoError(t, err)
-		_, err = app.ParserService.LaunchParser(3, "", false)
+		_, err = app.ParserService.LaunchParser(ParserParams{ChatID: 3, UserName: "username"})
 		assert.NoError(t, err)
 
 		adapterMocks.notification.WaitForCalls()
@@ -168,7 +168,7 @@ func Test_ParserLaunch(t *testing.T) {
 		defer app.ParserService.StopAllParsersSync()
 
 		adapterMocks.notification.SetCalls(2)
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
@@ -181,6 +181,50 @@ func Test_ParserLaunch(t *testing.T) {
 		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, fmt.Sprintf(config.TgInitialApsCountFormat, 3), sentMessages[1].Text)
 	})
+
+	t.Run("Parser restarts correctly with new links", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+
+		app, adapterMocks, config := initAppWithMocks()
+		adapterMocks.targetClient.SetResults([]int{3})
+		defer app.ParserService.StopAllParsersSync()
+
+		adapterMocks.notification.SetCalls(8)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
+		if err != nil {
+			t.Errorf("GetResult() error = %v", err)
+			return
+		}
+		_, err = app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
+		if err != nil {
+			t.Errorf("GetResult() error = %v", err)
+			return
+		}
+		_, err = app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
+		if err != nil {
+			t.Errorf("GetResult() error = %v", err)
+			return
+		}
+		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
+		if err != nil {
+			t.Errorf("GetResult() error = %v", err)
+			return
+		}
+
+		adapterMocks.notification.WaitForCalls()
+
+		sentMessages := adapterMocks.notification.GetSentMessages()
+		parserStartedMessages := pkg.Filter(sentMessages, func(msg output.SentMessageMock) bool {
+			return msg.Text == config.TgParserLaunchMessage
+		})
+		initialApsCountMessages := pkg.Filter(sentMessages, func(msg output.SentMessageMock) bool {
+			return msg.Text == fmt.Sprintf(config.TgInitialApsCountFormat, 3)
+		})
+		assert.Equal(t, 4, len(parserStartedMessages))
+		assert.Equal(t, 4, len(initialApsCountMessages))
+		assert.Equal(t, 1, len(app.ParserService.GetActiveParsers()))
+		assert.Equal(t, parser.ID, app.ParserService.GetActiveParsers()[0].ID)
+	})
 }
 
 func TestParserWorks(t *testing.T) {
@@ -191,7 +235,7 @@ func TestParserWorks(t *testing.T) {
 
 		adapterMocks.targetClient.SetResults([]int{10, 10, 10, 11})
 		adapterMocks.notification.SetCalls(3)
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
 		adapterMocks.notification.WaitForCalls()
 
@@ -206,7 +250,7 @@ func TestParserWorks(t *testing.T) {
 
 		adapterMocks.targetClient.SetResults([]int{10, 10, 11, 11, 12})
 		adapterMocks.notification.SetCalls(4)
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
 		adapterMocks.notification.WaitForCalls()
 
@@ -222,7 +266,7 @@ func TestParserWorks(t *testing.T) {
 
 		adapterMocks.targetClient.SetResults([]int{10, 14})
 		adapterMocks.notification.SetCalls(6)
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
 		adapterMocks.notification.WaitForCalls()
 
@@ -237,7 +281,7 @@ func TestParserWorks(t *testing.T) {
 
 		adapterMocks.targetClient.SetResults([]int{10, 9, 10, 11})
 		adapterMocks.notification.SetCalls(3)
-		_, err := app.ParserService.LaunchParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
 		adapterMocks.notification.WaitForCalls()
 
@@ -255,10 +299,10 @@ func TestParserAutoStart(t *testing.T) {
 	t.Run("All stored parsers start", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 		app := NewAppBuilder().WithDefaultMocks().
-			WithParserStorage([]domain.ParserData{
-				{1, "1"},
-				{2, "2"},
-				{3, "3"},
+			WithParserStorage([]ParserData{
+				{1, "1", "username"},
+				{2, "2", "username"},
+				{3, "3", "username"},
 			}).
 			WithClientResults([]int{10, 11}).
 			Build()
@@ -275,10 +319,10 @@ func TestParserPermissions(t *testing.T) {
 
 		apsNum := config.DefaultAllowedApsNum + 1
 		adapterMocks.targetClient.SetResults([]int{apsNum})
-		parser, err := app.ParserService.LaunchParser(1, "", false)
+		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.Error(t, err)
 		assert.Nil(t, parser)
-		var notAllowedErr domain.NotAllowedError
+		var notAllowedErr NotAllowedError
 		assert.ErrorAs(t, err, &notAllowedErr)
 		assert.Equal(t, config.DefaultAllowedApsNum, notAllowedErr.AllowedNum)
 		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)
@@ -291,10 +335,10 @@ func TestParserPermissions(t *testing.T) {
 		apsNum := config.DefaultAllowedApsNum + 1
 		adapterMocks.targetClient.SetResults([]int{apsNum})
 		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, config.DefaultAllowedApsNum}})
-		parser, err := app.ParserService.LaunchParser(1, "", false)
+		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.Error(t, err)
 		assert.Nil(t, parser)
-		var notAllowedErr domain.NotAllowedError
+		var notAllowedErr NotAllowedError
 		assert.ErrorAs(t, err, &notAllowedErr)
 		assert.Equal(t, config.DefaultAllowedApsNum, notAllowedErr.AllowedNum)
 		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)
@@ -309,7 +353,7 @@ func TestParserPermissions(t *testing.T) {
 		apsNum := config.DefaultAllowedApsNum + 9
 		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
 		adapterMocks.targetClient.SetResults([]int{apsNum})
-		parser, err := app.ParserService.LaunchParser(1, "", false)
+		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
 		assert.NotNil(t, parser)
 	})
@@ -323,10 +367,10 @@ func TestParserPermissions(t *testing.T) {
 		apsNum := config.DefaultAllowedApsNum - 5
 		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
 		adapterMocks.targetClient.SetResults([]int{apsNum})
-		parser, err := app.ParserService.LaunchParser(1, "", false)
+		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.Error(t, err)
 		assert.Nil(t, parser)
-		var notAllowedErr domain.NotAllowedError
+		var notAllowedErr NotAllowedError
 		assert.ErrorAs(t, err, &notAllowedErr)
 		assert.Equal(t, allowedInStorage, notAllowedErr.AllowedNum)
 		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)

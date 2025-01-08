@@ -73,7 +73,7 @@ func (s *ParserNotificationService) SendAdminInfo(chatID int64, parsers []*Parse
 		if err != nil {
 			link = parser.ParseLink
 		}
-		text += fmt.Sprintf("\n%d, aps: %d. %s", parser.ChatID, parser.CurrentApsCount, link)
+		text += fmt.Sprintf("\n%d %s, aps: %d. %s", parser.ChatID, parser.UserName, parser.CurrentApsCount, link)
 	}
 	return s.notificationClient.SendMessage(chatID, text)
 }
