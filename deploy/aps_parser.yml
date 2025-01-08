@@ -1,6 +1,6 @@
 version: '3.6'
 services:
-  krisha:
+  aps_parser:
     container_name: aps_parser
     restart: always
     image: ${IMAGE}
