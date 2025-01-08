@@ -33,18 +33,26 @@ func main() {
 	}
 
 	adapters := OutputPorts{
-		TargetClientPort:   output.NewTargetClientWebAdapter(),
-		NotificationPort:   output.NewNotificationAdapterTg(botAPI),
-		ParsersStoragePort: output.NewParserStorageAdapterPg(db),
+		TargetClientPort:       output.NewTargetClientWebAdapter(),
+		NotificationPort:       output.NewNotificationAdapterTg(botAPI),
+		ParsersStoragePort:     output.NewParserStorageAdapterPg(db),
+		PermissionsStoragePort: output.NewPermissionStorageAdapterPg(db),
 	}
 
 	resultService := NewResultService(adapters.TargetClientPort)
 	adminService := NewAdminService(config)
 	parserNotificationService := NewParserNotificationService(config, adapters.NotificationPort)
+	permissionsService := NewPermissionsService(config, adapters.PermissionsStoragePort)
 	app := App{
 		ResultService: resultService,
-		ParserService: NewParserService(config, resultService, parserNotificationService, adapters.ParsersStoragePort),
-		AdminService:  adminService,
+		ParserService: NewParserService(
+			config,
+			resultService,
+			parserNotificationService,
+			adapters.ParsersStoragePort,
+			permissionsService,
+		),
+		AdminService: adminService,
 	}
 
 	router := gin.Default()

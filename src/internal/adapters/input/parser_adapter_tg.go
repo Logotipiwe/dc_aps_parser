@@ -2,8 +2,11 @@ package input
 
 import (
 	"dc-aps-parser/src/internal/core/application"
+	"dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/internal/infrastructure/tg"
+	"errors"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"log"
 )
 
 type ParserAdapterTg struct {
@@ -75,9 +78,16 @@ func (t *ParserAdapterTg) HandleTgUpdate(update tgbotapi.Update) error {
 				return t.parserNotificationService.SendErrorStoppingParser(chatID)
 			}
 		}
-		_, err := t.parserService.NewParser(chatID, text, false)
+		_, err := t.parserService.LaunchParser(chatID, text, false)
 		if err != nil {
-			return err
+			var notAllowedErr domain.NotAllowedError
+			if errors.As(err, &notAllowedErr) {
+				t.parserNotificationService.SendApsNumNotAllowed(chatID, notAllowedErr.RequestedNum, notAllowedErr.AllowedNum)
+			} else {
+				_ = t.parserNotificationService.SendErrorMessage(chatID)
+				log.Println("Error starting parser from tg", err.Error())
+				return err
+			}
 		}
 		return nil
 	}

@@ -29,60 +29,60 @@ func newUpdate(chatID int64, text string) tgbotapi.Update {
 
 func TestCommands(t *testing.T) {
 	t.Run("Start answers", func(t *testing.T) {
-		app, notificationAdapter, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
 		err := adapterTg.HandleTgUpdate(newUpdate(1, "/start"))
 		assert.Nil(t, err)
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 1, len(sentMessages))
 		assert.Equal(t, config.TgUserStartMessage, sentMessages[0].Text)
 	})
 
 	t.Run("Stop command", func(t *testing.T) {
 		t.Run("Already stopped", func(t *testing.T) {
-			app, notificationAdapter, _, config := initAppWithMocks()
+			app, adapterMocks, config := initAppWithMocks()
 			adapterTg := createTgAdapter(app)
 
 			err := adapterTg.HandleTgUpdate(newUpdate(1, "/stop"))
 			assert.Nil(t, err)
-			sentMessages := notificationAdapter.GetSentMessages()
+			sentMessages := adapterMocks.notification.GetSentMessages()
 			assert.Equal(t, 1, len(sentMessages))
 			assert.Equal(t, config.TgParserAlreadyStoppedMessage, sentMessages[0].Text)
 		})
 		t.Run("Stopped", func(t *testing.T) {
 			defer goleak.VerifyNone(t)
-			app, notificationAdapter, _, config := initAppWithMocks()
+			app, adapterMocks, config := initAppWithMocks()
 			adapterTg := createTgAdapter(app)
 			defer app.ParserService.StopAllParsersSync()
 
-			_, err := app.ParserService.NewParser(1, "some", false)
+			_, err := app.ParserService.LaunchParser(1, "some", false)
 			assert.Nil(t, err)
 
 			err = adapterTg.HandleTgUpdate(newUpdate(1, "/stop"))
 			assert.Nil(t, err)
-			sentMessages := notificationAdapter.GetSentMessages()
+			sentMessages := adapterMocks.notification.GetSentMessages()
 			assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
 				return msg.Text == config.TgParserStoppedMessage
 			}))
 		})
 	})
 	t.Run("Help user", func(t *testing.T) {
-		app, notificationAdapter, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
 		err := adapterTg.HandleTgUpdate(newUpdate(1, "/help"))
 		assert.Nil(t, err)
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgUserHelpMessage, sentMessages[0].Text)
 	})
 	t.Run("Help admin", func(t *testing.T) {
-		app, notificationAdapter, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
 		err := adapterTg.HandleTgUpdate(newUpdate(config.TgAdminChatId, "/help"))
 		assert.Nil(t, err)
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgAdminHelpMessage, sentMessages[0].Text)
 	})
 	t.Run("Info for admin", func(t *testing.T) {
@@ -90,27 +90,27 @@ func TestCommands(t *testing.T) {
 	})
 	t.Run("Active parser status", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 		defer app.ParserService.StopAllParsersSync()
 
-		_, err := app.ParserService.NewParser(1, "some", false)
+		_, err := app.ParserService.LaunchParser(1, "some", false)
 		assert.Nil(t, err)
 
 		err = adapterTg.HandleTgUpdate(newUpdate(1, "/status"))
 		assert.Nil(t, err)
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
 			return msg.Text == config.TgActiveParserStatus
 		}))
 	})
 	t.Run("Non active parser status", func(t *testing.T) {
-		app, notificationAdapter, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
 
 		err := adapterTg.HandleTgUpdate(newUpdate(1, "/status"))
 		assert.Nil(t, err)
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgStoppedParserStatusMessage, sentMessages[0].Text)
 	})
 }
@@ -118,33 +118,33 @@ func TestCommands(t *testing.T) {
 func TestEnablingParser(t *testing.T) {
 	t.Run("Unknown if wrong link", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
-		targetClient.SetResults([]int{4})
+		adapterMocks.targetClient.SetResults([]int{4})
 		defer app.ParserService.StopAllParsersSync()
 
 		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://other.site"))
 		assert.Nil(t, err)
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 1, len(sentMessages))
 		assert.Equal(t, config.TgUnknownCommandMessage, sentMessages[0].Text)
 	})
 
 	t.Run("Starts if correct link", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		adapterTg := createTgAdapter(app)
-		targetClient.SetResults([]int{4})
-		notificationAdapter.SetCalls(2)
+		adapterMocks.targetClient.SetResults([]int{4})
+		adapterMocks.notification.SetCalls(2)
 		defer app.ParserService.StopAllParsersSync()
 
 		err := adapterTg.HandleTgUpdate(newUpdate(1, "https://www.avito.ru/js/1/map/items?kek"))
 		assert.Nil(t, err)
 
-		notificationAdapter.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, fmt.Sprintf(config.TgInitialApsCountFormat, 4), sentMessages[1].Text)
 	})

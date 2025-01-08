@@ -11,6 +11,7 @@ type ResultStoragePort interface {
 
 type TargetClientPort interface {
 	GetParseResult(parseLink string) (domain.ParseResult, error)
+	GetTotalCount(parseLink string) (int, error)
 }
 
 type NotificationPort interface {
@@ -22,4 +23,8 @@ type ParsersStoragePort interface {
 	SaveParser(parser domain.ParserData) error
 	RemoveParser(parser domain.ParserData) error
 	GetParsers() ([]domain.ParserData, error)
+}
+
+type PermissionsStoragePort interface {
+	GetPermittedApsNumForChat(chatID int64) (*int, error)
 }

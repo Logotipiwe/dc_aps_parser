@@ -22,12 +22,23 @@ func NewTargetClientWebAdapter() *TargetClientAdapterWeb {
 	return &TargetClientAdapterWeb{}
 }
 
+func (k *TargetClientAdapterWeb) GetTotalCount(parseLink string) (int, error) {
+	link, err := k.prepareLink(parseLink)
+	if err != nil {
+		return 0, err
+	}
+	answer, err := k.doRequest(link)
+	if err != nil {
+		return 0, err
+	}
+	return answer.TotalCount, nil
+}
+
 func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseResult, error) {
-	targetUrl, err := url.Parse(parseLink)
+	targetUrl, err := k.prepareLink(parseLink)
 	if err != nil {
 		return domain.ParseResult{}, err
 	}
-	setQueryParam(targetUrl, "limit", strconv.Itoa(pageSize))
 	answers, err := k.doRequestPages(targetUrl, pageSize)
 	if err != nil {
 		return domain.ParseResult{}, err
@@ -35,6 +46,7 @@ func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseR
 	result := domain.NewParseResult()
 	for i, answer := range answers {
 		result.BrowserUrl = targetUrl.Host + answer.Url
+		result.TotalCount = answer.TotalCount
 		for _, answerItem := range answer.Items {
 			result.Items = append(result.Items, domain.NewParseItem(
 				answerItem.ID, targetUrl.Host+answerItem.UrlPath))
@@ -43,6 +55,15 @@ func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseR
 	}
 	log.Println("Total result items: ", len(result.Items))
 	return result, nil
+}
+
+func (k *TargetClientAdapterWeb) prepareLink(parseLink string) (*url.URL, error) {
+	targetUrl, err := url.Parse(parseLink)
+	if err != nil {
+		return nil, err
+	}
+	setQueryParam(targetUrl, "limit", strconv.Itoa(pageSize))
+	return targetUrl, nil
 }
 
 func (k *TargetClientAdapterWeb) doRequestPages(link *url.URL, pageSize int) ([]TargetAnswer, error) {

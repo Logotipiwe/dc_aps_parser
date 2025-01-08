@@ -1,6 +1,7 @@
 package application
 
 import (
+	"dc-aps-parser/src/internal/core/domain"
 	drivenport "dc-aps-parser/src/internal/core/ports/output"
 	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
@@ -19,6 +20,7 @@ type ParserService struct {
 	*ResultService
 	ParserNotificationService *ParserNotificationService
 	parsersStorage            drivenport.ParsersStoragePort
+	permissionsService        *PermissionsService
 }
 
 func NewParserService(
@@ -26,6 +28,7 @@ func NewParserService(
 	resultService *ResultService,
 	parserNotificationService *ParserNotificationService,
 	parsersStorage drivenport.ParsersStoragePort,
+	permissionsService *PermissionsService,
 ) *ParserService {
 	p := &ParserService{
 		config:                    config,
@@ -34,34 +37,61 @@ func NewParserService(
 		ResultService:             resultService,
 		ParserNotificationService: parserNotificationService,
 		parsersStorage:            parsersStorage,
+		permissionsService:        permissionsService,
 	}
 	p.initParsersFromStorage()
 	return p
 }
 
-func (p *ParserService) NewParser(chatID int64, parseLink string, isSilentStart bool) (*Parser, error) {
+func (p *ParserService) LaunchParser(
+	chatID int64,
+	parseLink string,
+	isStartedFromStorage bool,
+) (*Parser, error) {
 	if p.parsersByChatID[chatID] != nil {
 		return nil, errors.New("parser already exists")
 	}
-	wg := new(sync.WaitGroup)
+
+	err := p.checkIfApsNumAllowed(chatID, parseLink)
+	if err != nil {
+		return nil, err
+	}
+
 	parser := newParser(
 		uuid.New().String(),
 		chatID,
 		parseLink,
 		p.config.ParseInterval,
-		wg,
+		new(sync.WaitGroup),
 		p.ResultService,
 		p.ParserNotificationService,
-		isSilentStart,
+		isStartedFromStorage,
 	)
-	err := p.parsersStorage.SaveParser(parser.toData())
-	if err != nil {
-		return nil, err
+	if !isStartedFromStorage {
+		err = p.parsersStorage.SaveParser(parser.toData())
+		if err != nil {
+			return nil, err
+		}
 	}
 	parser.init()
 	p.parsers = append(p.parsers, parser)
 	p.parsersByChatID[chatID] = parser
 	return parser, nil
+}
+
+func (p *ParserService) checkIfApsNumAllowed(chatID int64, parseLink string) error {
+	apsNum, err := p.ResultService.GetTotalCount(parseLink)
+	if err != nil {
+		return err
+	}
+	allowedApsNum, err := p.permissionsService.GetAllowedApsNum(chatID)
+	if err != nil {
+		return err
+	}
+	if apsNum > allowedApsNum {
+		return domain.NewNotAllowedError(apsNum, allowedApsNum)
+	}
+	return nil
 }
 
 func (p *ParserService) HasActiveParser(chatID int64) bool {
@@ -111,7 +141,7 @@ func (p *ParserService) initParsersFromStorage() {
 		log.Fatal(err)
 	}
 	for _, parserData := range parsersData {
-		_, err := p.NewParser(parserData.ChatID, parserData.Link, true)
+		_, err := p.LaunchParser(parserData.ChatID, parserData.Link, true)
 		if err != nil {
 			log.Println("Error starting parser for chat " + strconv.FormatInt(parserData.ChatID, 10))
 			log.Println(err)

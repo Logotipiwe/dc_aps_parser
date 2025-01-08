@@ -81,3 +81,11 @@ func (s *ParserNotificationService) SendAdminInfo(chatID int64, parsers []*Parse
 func (s *ParserNotificationService) SendParserStatus(chatID int64) error {
 	return s.notificationClient.SendMessage(chatID, s.config.TgActiveParserStatus) // Парсер включен и ожидает новых объявлений, они будут присланы сюда как только появятся. Чтобы остановить его, отправьте /stop
 }
+
+func (s *ParserNotificationService) SendApsNumNotAllowed(chatID int64, requestedNum int, allowedNum int) error {
+	return s.notificationClient.SendMessage(chatID, fmt.Sprintf(s.config.TgApsNumNotAllowedFormat, requestedNum, allowedNum))
+}
+
+func (s *ParserNotificationService) SendErrorMessage(chatID int64) error {
+	return s.notificationClient.SendMessage(chatID, s.config.TgErrorMessage)
+}

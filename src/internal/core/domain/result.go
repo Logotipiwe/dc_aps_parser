@@ -3,6 +3,7 @@ package domain
 type ParseResult struct {
 	BrowserUrl string
 	Items      []ParseItem
+	TotalCount int
 }
 
 type ParseItem struct {

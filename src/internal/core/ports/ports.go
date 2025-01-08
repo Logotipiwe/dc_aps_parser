@@ -9,6 +9,7 @@ type OutputPorts struct {
 	TargetClientPort
 	NotificationPort
 	ParsersStoragePort
+	PermissionsStoragePort
 }
 
 type InputPorts struct {

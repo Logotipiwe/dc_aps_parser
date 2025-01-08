@@ -11,6 +11,7 @@ import (
 type Config struct {
 	ParseInterval                 time.Duration
 	TgAdminChatId                 int64
+	DefaultAllowedApsNum          int
 	TgUserStartMessage            string
 	TgParserLaunchMessage         string
 	TgParserAlreadyStoppedMessage string
@@ -22,6 +23,8 @@ type Config struct {
 	TgUnknownCommandMessage       string
 	TgActiveParserStatus          string
 	TgInitialApsCountFormat       string
+	TgApsNumNotAllowedFormat      string
+	TgErrorMessage                string
 }
 
 func NewConfig() *Config {
@@ -32,6 +35,7 @@ func NewConfig() *Config {
 	return &Config{
 		ParseInterval:                 time.Duration(parseIntervalMs) * time.Millisecond,
 		TgAdminChatId:                 pkg.OsGetInt64NonEmpty("TG_ADMIN_CHAT_ID"),
+		DefaultAllowedApsNum:          pkg.OsGetIntNonEmpty("DEFAULT_ALLOWED_APS_NUM"),
 		TgUserStartMessage:            pkg.OsGetNonEmpty("TG_USER_START_MESSAGE"),
 		TgParserLaunchMessage:         pkg.OsGetNonEmpty("TG_PARSER_LAUNCH_MESSAGE"),
 		TgParserAlreadyStoppedMessage: pkg.OsGetNonEmpty("TG_PARSER_ALREADY_STOPPED_MESSAGE"),
@@ -43,5 +47,7 @@ func NewConfig() *Config {
 		TgUnknownCommandMessage:       pkg.OsGetNonEmpty("TG_UNKNOWN_COMMAND_MESSAGE"),
 		TgActiveParserStatus:          pkg.OsGetNonEmpty("TG_ACTIVE_PARSER_STATUS_MESSAGE"),
 		TgInitialApsCountFormat:       pkg.OsGetNonEmpty("TG_INITIAL_APS_COUNT_FORMAT"),
+		TgApsNumNotAllowedFormat:      pkg.OsGetNonEmpty("TG_APS_NUM_NOT_ALLOWED_FORMAT"),
+		TgErrorMessage:                pkg.OsGetNonEmpty("TG_ERROR_MESSAGE"),
 	}
 }

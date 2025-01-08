@@ -3,6 +3,7 @@ package application
 import (
 	"dc-aps-parser/src/internal/core/domain"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -20,7 +21,7 @@ type Parser struct {
 	apsMemory                 map[int64]domain.ParseItem
 	CurrentApsCount           int
 	CurrentBrowserUrl         string
-	isSilentStart             bool
+	isCreatedFromStorage      bool
 }
 
 func newParser(
@@ -31,7 +32,7 @@ func newParser(
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	parserNotificationService *ParserNotificationService,
-	isSilentStart bool,
+	isCreatedFromStorage bool,
 ) *Parser {
 	stopWg.Add(1)
 	return &Parser{
@@ -45,13 +46,18 @@ func newParser(
 		resultsService:            service,
 		parserNotificationService: parserNotificationService,
 		apsMemory:                 make(map[int64]domain.ParseItem),
-		isSilentStart:             isSilentStart,
+		isCreatedFromStorage:      isCreatedFromStorage,
 	}
 }
 
 func (p *Parser) init() {
-	if !p.isSilentStart {
+	if !p.isCreatedFromStorage {
 		_ = p.parserNotificationService.SendParserLaunched(p.ChatID)
+	}
+	if p.isCreatedFromStorage {
+		log.Printf("New parser %v created from storage\n", p.ID)
+	} else {
+		log.Printf("New parser %v created from user\n", p.ID)
 	}
 	go func() {
 		for {
@@ -88,7 +94,7 @@ func (p *Parser) doParse() {
 	}
 
 	if p.isFirstParse {
-		if !p.isSilentStart {
+		if !p.isCreatedFromStorage {
 			_ = p.parserNotificationService.SendInitialApsCount(p.ChatID, len(p.apsMemory))
 		}
 		p.isFirstParse = false

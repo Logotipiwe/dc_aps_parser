@@ -62,3 +62,12 @@ func Some[T any](slice []T, predicate func(T) bool) bool {
 	}
 	return false
 }
+
+func OsGetIntNonEmpty(key string) int {
+	valueStr := os.Getenv(key)
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		panic("Value in environment variable is not int: " + key)
+	}
+	return value
+}

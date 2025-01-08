@@ -3,6 +3,7 @@ package tests
 import (
 	"dc-aps-parser/src/internal/adapters/output"
 	"dc-aps-parser/src/internal/core/application"
+	"dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/internal/infrastructure"
 	"dc-aps-parser/src/pkg"
 	"fmt"
@@ -12,10 +13,38 @@ import (
 	"time"
 )
 
-func initAppWithMocks() (application.App, *output.NotificationAdapterMock, *output.TargetClientAdapterMock, *infrastructure.Config) {
-	config := &infrastructure.Config{
+type AdapterMocks struct {
+	notification       *output.NotificationAdapterMock
+	targetClient       *output.TargetClientAdapterMock
+	permissionsStorage *output.PermissionStorageAdapterMock
+	parserStorage      *output.ParserStorageAdapterMock
+}
+
+type AppBuilder struct {
+	*infrastructure.Config
+	AdapterMocks
+	*application.App
+}
+
+func NewAppBuilder() *AppBuilder {
+	return &AppBuilder{}
+}
+
+func (a *AppBuilder) WithAdapterMocks() *AppBuilder {
+	a.AdapterMocks = AdapterMocks{
+		output.NewNotificationAdapterMock(),
+		output.NewTargetClientAdapterMock(),
+		output.NewPermissionStorageAdapterMock(),
+		output.NewParserStorageAdapterMock(),
+	}
+	return a
+}
+
+func (a *AppBuilder) WithConfigMock() *AppBuilder {
+	a.Config = &infrastructure.Config{
 		ParseInterval:                 time.Millisecond * 100,
 		TgAdminChatId:                 int64(10),
+		DefaultAllowedApsNum:          200,
 		TgParserLaunchMessage:         "Parser launched",
 		TgUserStartMessage:            "Hello!",
 		TgParserAlreadyStoppedMessage: "Parser already stopped",
@@ -27,35 +56,65 @@ func initAppWithMocks() (application.App, *output.NotificationAdapterMock, *outp
 		TgUnknownCommandMessage:       "Unknown command",
 		TgActiveParserStatus:          "Parser is active",
 		TgInitialApsCountFormat:       "init %d aps",
+		TgApsNumNotAllowedFormat:      "Yours %d, allowed %d",
+		TgErrorMessage:                "Yps, err",
 	}
+	return a
+}
 
-	targetClientAdapterMock := output.NewTargetClientAdapterMock()
-	notificationAdapterMock := output.NewNotificationAdapterMock()
-	resultService := application.NewResultService(targetClientAdapterMock)
-	parserNotificationService := application.NewParserNotificationService(config, notificationAdapterMock)
-	app := application.App{
+func (a *AppBuilder) WithDefaultMocks() *AppBuilder {
+	return a.WithConfigMock().WithAdapterMocks()
+}
+
+func (a *AppBuilder) WithParserStorage(parsers []domain.ParserData) *AppBuilder {
+	a.parserStorage.SetParsers(parsers)
+	return a
+}
+
+func (a *AppBuilder) WithClientResults(results []int) *AppBuilder {
+	a.targetClient.SetResults(results)
+	return a
+}
+
+func (a *AppBuilder) Build() *AppBuilder {
+	resultService := application.NewResultService(a.AdapterMocks.targetClient)
+	parserNotificationService := application.NewParserNotificationService(a.Config, a.AdapterMocks.notification)
+	permissionsService := application.NewPermissionsService(a.Config, a.AdapterMocks.permissionsStorage)
+
+	a.App = &application.App{
 		ResultService: resultService,
-		ParserService: application.NewParserService(config, resultService, parserNotificationService, nil),
-		AdminService:  application.NewAdminService(config),
+		ParserService: application.NewParserService(
+			a.Config,
+			resultService,
+			parserNotificationService,
+			a.AdapterMocks.parserStorage,
+			permissionsService,
+		),
+		AdminService: application.NewAdminService(a.Config),
 	}
-	return app, notificationAdapterMock, targetClientAdapterMock, config
+	return a
+}
+
+func initAppWithMocks() (application.App, AdapterMocks, *infrastructure.Config) {
+	app := NewAppBuilder().WithDefaultMocks().Build()
+	return *app.App, app.AdapterMocks, app.Config
 }
 
 func Test_ParserLaunch(t *testing.T) {
 	t.Run("Parser creates", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		app, notificationAdapterMock, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		_, err := app.ParserService.NewParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
 			return
 		}
 
-		sentMessages := notificationAdapterMock.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 1, len(sentMessages))
 		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, int64(1), sentMessages[0].ChatID)
@@ -63,28 +122,28 @@ func Test_ParserLaunch(t *testing.T) {
 
 	t.Run("Parser doesn't stop if not exist", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, _, _, _ := initAppWithMocks()
+		app, _, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 		assert.Error(t, app.ParserService.StopParser(1))
 	})
 
 	t.Run("Many parsers create", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapterMock, _, config := initAppWithMocks()
+		app, adapterMocks, config := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		notificationAdapterMock.SetCalls(6)
+		adapterMocks.notification.SetCalls(6)
 
-		_, err := app.ParserService.NewParser(1, "", false)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 		assert.NoError(t, err)
-		_, err = app.ParserService.NewParser(2, "", false)
+		_, err = app.ParserService.LaunchParser(2, "", false)
 		assert.NoError(t, err)
-		_, err = app.ParserService.NewParser(3, "", false)
+		_, err = app.ParserService.LaunchParser(3, "", false)
 		assert.NoError(t, err)
 
-		notificationAdapterMock.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapterMock.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 6, len(sentMessages))
 
 		check := func(chatId int64, messages []output.SentMessageMock) {
@@ -104,21 +163,21 @@ func Test_ParserLaunch(t *testing.T) {
 	t.Run("Parser gets init aps count", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
 
-		app, notificationAdapterMock, targetClient, config := initAppWithMocks()
-		targetClient.SetResults([]int{3})
+		app, adapterMocks, config := initAppWithMocks()
+		adapterMocks.targetClient.SetResults([]int{3})
 		defer app.ParserService.StopAllParsersSync()
 
-		notificationAdapterMock.SetCalls(2)
-		_, err := app.ParserService.NewParser(1, "", false)
+		adapterMocks.notification.SetCalls(2)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 
 		if err != nil {
 			t.Errorf("GetResult() error = %v", err)
 			return
 		}
 
-		notificationAdapterMock.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapterMock.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, config.TgParserLaunchMessage, sentMessages[0].Text)
 		assert.Equal(t, fmt.Sprintf(config.TgInitialApsCountFormat, 3), sentMessages[1].Text)
 	})
@@ -127,62 +186,149 @@ func Test_ParserLaunch(t *testing.T) {
 func TestParserWorks(t *testing.T) {
 	t.Run("Parser detects new ap", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		app, adapterMocks, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		targetClient.SetResults([]int{10, 10, 10, 11})
-		notificationAdapter.SetCalls(3)
-		_, err := app.ParserService.NewParser(1, "", false)
+		adapterMocks.targetClient.SetResults([]int{10, 10, 10, 11})
+		adapterMocks.notification.SetCalls(3)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 		assert.NoError(t, err)
-		notificationAdapter.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
 	})
 
 	t.Run("Parser detects many new aps", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		app, adapterMocks, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		targetClient.SetResults([]int{10, 10, 11, 11, 12})
-		notificationAdapter.SetCalls(4)
-		_, err := app.ParserService.NewParser(1, "", false)
+		adapterMocks.targetClient.SetResults([]int{10, 10, 11, 11, 12})
+		adapterMocks.notification.SetCalls(4)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 		assert.NoError(t, err)
-		notificationAdapter.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
 		assert.Equal(t, "Новое объявление link_12", sentMessages[3].Text)
 	})
 
 	t.Run("Parser detects many new aps at one time", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		app, adapterMocks, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		targetClient.SetResults([]int{10, 14})
-		notificationAdapter.SetCalls(6)
-		_, err := app.ParserService.NewParser(1, "", false)
+		adapterMocks.targetClient.SetResults([]int{10, 14})
+		adapterMocks.notification.SetCalls(6)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 		assert.NoError(t, err)
-		notificationAdapter.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 6, len(sentMessages))
 	})
 
 	t.Run("Parser ignores hiding and showing some ap", func(t *testing.T) {
 		defer goleak.VerifyNone(t)
-		app, notificationAdapter, targetClient, _ := initAppWithMocks()
+		app, adapterMocks, _ := initAppWithMocks()
 		defer app.ParserService.StopAllParsersSync()
 
-		targetClient.SetResults([]int{10, 9, 10, 11})
-		notificationAdapter.SetCalls(3)
-		_, err := app.ParserService.NewParser(1, "", false)
+		adapterMocks.targetClient.SetResults([]int{10, 9, 10, 11})
+		adapterMocks.notification.SetCalls(3)
+		_, err := app.ParserService.LaunchParser(1, "", false)
 		assert.NoError(t, err)
-		notificationAdapter.WaitForCalls()
+		adapterMocks.notification.WaitForCalls()
 
-		sentMessages := notificationAdapter.GetSentMessages()
+		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, "Новое объявление link_11", sentMessages[2].Text)
+	})
+}
+
+func TestParserAutoStart(t *testing.T) {
+	t.Run("Nothing starts if storage empty", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		initAppWithMocks()
+	})
+
+	t.Run("All stored parsers start", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app := NewAppBuilder().WithDefaultMocks().
+			WithParserStorage([]domain.ParserData{
+				{1, "1"},
+				{2, "2"},
+				{3, "3"},
+			}).
+			WithClientResults([]int{10, 11}).
+			Build()
+		defer app.ParserService.StopAllParsersSync()
+
+		assert.Equal(t, 3, len(app.ParserService.GetActiveParsers()))
+	})
+}
+
+func TestParserPermissions(t *testing.T) {
+	t.Run("Denies if more than config", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, adapterMocks, config := initAppWithMocks()
+
+		apsNum := config.DefaultAllowedApsNum + 1
+		adapterMocks.targetClient.SetResults([]int{apsNum})
+		parser, err := app.ParserService.LaunchParser(1, "", false)
+		assert.Error(t, err)
+		assert.Nil(t, parser)
+		var notAllowedErr domain.NotAllowedError
+		assert.ErrorAs(t, err, &notAllowedErr)
+		assert.Equal(t, config.DefaultAllowedApsNum, notAllowedErr.AllowedNum)
+		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)
+	})
+
+	t.Run("Denies if more than config and storage", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, adapterMocks, config := initAppWithMocks()
+
+		apsNum := config.DefaultAllowedApsNum + 1
+		adapterMocks.targetClient.SetResults([]int{apsNum})
+		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, config.DefaultAllowedApsNum}})
+		parser, err := app.ParserService.LaunchParser(1, "", false)
+		assert.Error(t, err)
+		assert.Nil(t, parser)
+		var notAllowedErr domain.NotAllowedError
+		assert.ErrorAs(t, err, &notAllowedErr)
+		assert.Equal(t, config.DefaultAllowedApsNum, notAllowedErr.AllowedNum)
+		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)
+	})
+
+	t.Run("Allows if storage allows but config doesn't", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, adapterMocks, config := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		allowedInStorage := config.DefaultAllowedApsNum + 10
+		apsNum := config.DefaultAllowedApsNum + 9
+		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
+		adapterMocks.targetClient.SetResults([]int{apsNum})
+		parser, err := app.ParserService.LaunchParser(1, "", false)
+		assert.NoError(t, err)
+		assert.NotNil(t, parser)
+	})
+
+	t.Run("Denies if storage denies but config allow", func(t *testing.T) {
+		defer goleak.VerifyNone(t)
+		app, adapterMocks, config := initAppWithMocks()
+		defer app.ParserService.StopAllParsersSync()
+
+		allowedInStorage := config.DefaultAllowedApsNum - 10
+		apsNum := config.DefaultAllowedApsNum - 5
+		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
+		adapterMocks.targetClient.SetResults([]int{apsNum})
+		parser, err := app.ParserService.LaunchParser(1, "", false)
+		assert.Error(t, err)
+		assert.Nil(t, parser)
+		var notAllowedErr domain.NotAllowedError
+		assert.ErrorAs(t, err, &notAllowedErr)
+		assert.Equal(t, allowedInStorage, notAllowedErr.AllowedNum)
+		assert.Equal(t, apsNum, notAllowedErr.RequestedNum)
 	})
 }
