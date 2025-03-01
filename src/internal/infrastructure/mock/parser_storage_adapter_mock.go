@@ -1,4 +1,4 @@
-package output
+package mock
 
 import (
 	"dc-aps-parser/src/internal/core/domain"

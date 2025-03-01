@@ -1,10 +1,10 @@
 package tests
 
 import (
-	"dc-aps-parser/src/internal/adapters/output"
 	"dc-aps-parser/src/internal/core/application"
 	. "dc-aps-parser/src/internal/core/domain"
 	"dc-aps-parser/src/internal/infrastructure"
+	"dc-aps-parser/src/internal/infrastructure/mock"
 	"dc-aps-parser/src/pkg"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -14,10 +14,10 @@ import (
 )
 
 type AdapterMocks struct {
-	notification       *output.NotificationAdapterMock
-	targetClient       *output.TargetClientAdapterMock
-	permissionsStorage *output.PermissionStorageAdapterMock
-	parserStorage      *output.ParserStorageAdapterMock
+	notification       *mock.NotificationAdapterMock
+	targetClient       *mock.TargetClientAdapterMock
+	permissionsStorage *mock.PermissionStorageAdapterMock
+	parserStorage      *mock.ParserStorageAdapterMock
 }
 
 type AppBuilder struct {
@@ -32,10 +32,10 @@ func NewAppBuilder() *AppBuilder {
 
 func (a *AppBuilder) WithAdapterMocks() *AppBuilder {
 	a.AdapterMocks = AdapterMocks{
-		output.NewNotificationAdapterMock(),
-		output.NewTargetClientAdapterMock(),
-		output.NewPermissionStorageAdapterMock(),
-		output.NewParserStorageAdapterMock(),
+		mock.NewNotificationAdapterMock(),
+		mock.NewTargetClientAdapterMock(),
+		mock.NewPermissionStorageAdapterMock(),
+		mock.NewParserStorageAdapterMock(),
 	}
 	return a
 }
@@ -146,8 +146,8 @@ func Test_ParserLaunch(t *testing.T) {
 		sentMessages := adapterMocks.notification.GetSentMessages()
 		assert.Equal(t, 6, len(sentMessages))
 
-		check := func(chatId int64, messages []output.SentMessageMock) {
-			messagesToChat := pkg.Filter(messages, func(msg output.SentMessageMock) bool {
+		check := func(chatId int64, messages []mock.SentMessageMock) {
+			messagesToChat := pkg.Filter(messages, func(msg mock.SentMessageMock) bool {
 				return msg.ChatID == chatId
 			})
 			assert.Equal(t, 2, len(messagesToChat))
@@ -214,10 +214,10 @@ func Test_ParserLaunch(t *testing.T) {
 		adapterMocks.notification.WaitForCalls()
 
 		sentMessages := adapterMocks.notification.GetSentMessages()
-		parserStartedMessages := pkg.Filter(sentMessages, func(msg output.SentMessageMock) bool {
+		parserStartedMessages := pkg.Filter(sentMessages, func(msg mock.SentMessageMock) bool {
 			return msg.Text == config.TgParserLaunchMessage
 		})
-		initialApsCountMessages := pkg.Filter(sentMessages, func(msg output.SentMessageMock) bool {
+		initialApsCountMessages := pkg.Filter(sentMessages, func(msg mock.SentMessageMock) bool {
 			return msg.Text == fmt.Sprintf(config.TgInitialApsCountFormat, 3)
 		})
 		assert.Equal(t, 4, len(parserStartedMessages))
@@ -334,7 +334,7 @@ func TestParserPermissions(t *testing.T) {
 
 		apsNum := config.DefaultAllowedApsNum + 1
 		adapterMocks.targetClient.SetResults([]int{apsNum})
-		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, config.DefaultAllowedApsNum}})
+		adapterMocks.permissionsStorage.SetPermissions([]mock.PermissionMock{{1, config.DefaultAllowedApsNum}})
 		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.Error(t, err)
 		assert.Nil(t, parser)
@@ -351,7 +351,7 @@ func TestParserPermissions(t *testing.T) {
 
 		allowedInStorage := config.DefaultAllowedApsNum + 10
 		apsNum := config.DefaultAllowedApsNum + 9
-		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
+		adapterMocks.permissionsStorage.SetPermissions([]mock.PermissionMock{{1, allowedInStorage}})
 		adapterMocks.targetClient.SetResults([]int{apsNum})
 		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.NoError(t, err)
@@ -365,7 +365,7 @@ func TestParserPermissions(t *testing.T) {
 
 		allowedInStorage := config.DefaultAllowedApsNum - 10
 		apsNum := config.DefaultAllowedApsNum - 5
-		adapterMocks.permissionsStorage.SetPermissions([]output.PermissionMock{{1, allowedInStorage}})
+		adapterMocks.permissionsStorage.SetPermissions([]mock.PermissionMock{{1, allowedInStorage}})
 		adapterMocks.targetClient.SetResults([]int{apsNum})
 		parser, err := app.ParserService.LaunchParser(ParserParams{ChatID: 1, UserName: "username"})
 		assert.Error(t, err)

@@ -1,15 +1,11 @@
-package output
-
-import (
-	"dc-aps-parser/src/internal/infrastructure/tg"
-)
+package tg
 
 type NotificationAdapterTg struct {
-	bot *tg.BotAPI
+	bot *BotAPI
 }
 
 func NewNotificationAdapterTg(
-	botAPI *tg.BotAPI,
+	botAPI *BotAPI,
 ) *NotificationAdapterTg {
 	return &NotificationAdapterTg{
 		botAPI,

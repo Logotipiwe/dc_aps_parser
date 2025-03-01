@@ -1,10 +1,10 @@
 package tests
 
 import (
-	"dc-aps-parser/src/internal/adapters/input"
-	"dc-aps-parser/src/internal/adapters/output"
+	"dc-aps-parser/src/internal/adapters"
 	"dc-aps-parser/src/internal/core/application"
 	. "dc-aps-parser/src/internal/core/domain"
+	"dc-aps-parser/src/internal/infrastructure/mock"
 	"dc-aps-parser/src/pkg"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -13,8 +13,8 @@ import (
 	"testing"
 )
 
-func createTgAdapter(app application.App) *input.ParserAdapterTg {
-	return input.NewParserAdapterTg(nil, app.ParserService, app.AdminService, app.ParserNotificationService)
+func createTgAdapter(app application.App) *adapters.ParserAdapterTg {
+	return adapters.NewParserAdapterTg(nil, app.ParserService, app.AdminService, app.ParserNotificationService)
 }
 
 func newUpdate(chatID int64, text string, username string) tgbotapi.Update {
@@ -66,7 +66,7 @@ func TestCommands(t *testing.T) {
 			err = adapterTg.HandleTgUpdate(newUpdate(1, "/stop", ""))
 			assert.Nil(t, err)
 			sentMessages := adapterMocks.notification.GetSentMessages()
-			assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
+			assert.True(t, pkg.Some(sentMessages, func(msg mock.SentMessageMock) bool {
 				return msg.Text == config.TgParserStoppedMessage
 			}))
 		})
@@ -104,7 +104,7 @@ func TestCommands(t *testing.T) {
 		err = adapterTg.HandleTgUpdate(newUpdate(1, "/status", ""))
 		assert.Nil(t, err)
 		sentMessages := adapterMocks.notification.GetSentMessages()
-		assert.True(t, pkg.Some(sentMessages, func(msg output.SentMessageMock) bool {
+		assert.True(t, pkg.Some(sentMessages, func(msg mock.SentMessageMock) bool {
 			return msg.Text == config.TgActiveParserStatus
 		}))
 	})

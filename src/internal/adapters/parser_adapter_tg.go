@@ -1,4 +1,4 @@
-package input
+package adapters
 
 import (
 	"dc-aps-parser/src/internal/core/application"

@@ -10,12 +10,10 @@ type BotAPI struct {
 }
 
 func NewBotAPI(botToken string) *BotAPI {
-	if botToken == "" {
-		log.Fatal("Given telegram bot token is empty")
-	}
+	log.Println("Connecting to tg bot...")
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Println("error with bot token " + botToken)
+		log.Println("error creating tg bot")
 		log.Panic(err)
 	}
 	log.Printf("Authorized on account %s", bot.Self.UserName)

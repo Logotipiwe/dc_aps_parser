@@ -1,9 +1,10 @@
 package domain
 
 type ParseResult struct {
-	BrowserUrl string
-	Items      []ParseItem
-	TotalCount int
+	BrowserUrl   string
+	Items        []ParseItem
+	TotalCount   int
+	RawItemsById map[int64]map[string]interface{}
 }
 
 type ParseItem struct {
@@ -20,6 +21,7 @@ func NewParseItem(ID int64, link string) ParseItem {
 
 func NewParseResult() ParseResult {
 	return ParseResult{
-		Items: make([]ParseItem, 0),
+		Items:        make([]ParseItem, 0),
+		RawItemsById: make(map[int64]map[string]interface{}),
 	}
 }

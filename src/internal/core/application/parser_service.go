@@ -19,6 +19,7 @@ type ParserService struct {
 	parsersByChatID map[int64]*Parser
 	*ResultService
 	ParserNotificationService *ParserNotificationService
+	resultsStorageService     *ResultsStorageService
 	parsersStorage            drivenport.ParsersStoragePort
 	permissionsService        *PermissionsService
 }
@@ -27,6 +28,7 @@ func NewParserService(
 	config *infrastructure.Config,
 	resultService *ResultService,
 	parserNotificationService *ParserNotificationService,
+	resultsStorageService *ResultsStorageService,
 	parsersStorage drivenport.ParsersStoragePort,
 	permissionsService *PermissionsService,
 ) *ParserService {
@@ -36,6 +38,7 @@ func NewParserService(
 		parsersByChatID:           make(map[int64]*Parser),
 		ResultService:             resultService,
 		ParserNotificationService: parserNotificationService,
+		resultsStorageService:     resultsStorageService,
 		parsersStorage:            parsersStorage,
 		permissionsService:        permissionsService,
 	}
@@ -63,6 +66,7 @@ func (p *ParserService) LaunchParser(params domain.ParserParams) (*Parser, error
 		new(sync.WaitGroup),
 		p.ResultService,
 		p.ParserNotificationService,
+		p.resultsStorageService,
 	)
 	if !params.IsStartedFromStorage {
 		err = p.parsersStorage.SaveParser(domain.ParserData{

@@ -1,4 +1,4 @@
-package output
+package web
 
 import (
 	"dc-aps-parser/src/internal/core/domain"
@@ -27,7 +27,7 @@ func (k *TargetClientAdapterWeb) GetTotalCount(parseLink string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	answer, err := k.doRequest(link)
+	answer, _, err := k.doRequest(link)
 	if err != nil {
 		return 0, err
 	}
@@ -39,7 +39,7 @@ func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseR
 	if err != nil {
 		return domain.ParseResult{}, err
 	}
-	answers, err := k.doRequestPages(targetUrl, pageSize)
+	answers, rawAnswers, err := k.doRequestPages(targetUrl, pageSize)
 	if err != nil {
 		return domain.ParseResult{}, err
 	}
@@ -52,7 +52,11 @@ func (k *TargetClientAdapterWeb) GetParseResult(parseLink string) (domain.ParseR
 				answerItem.ID, targetUrl.Host+answerItem.UrlPath))
 		}
 		log.Println(fmt.Sprintf("Merged %d items for %d answer", len(answer.Items), i+1))
+		if len(answer.Items) == 0 {
+			log.Println(fmt.Sprintf("No items found for %v", targetUrl))
+		}
 	}
+	result.RawItemsById = k.associateRawItemsById(rawAnswers)
 	log.Println("Total result items: ", len(result.Items))
 	return result, nil
 }
@@ -66,33 +70,32 @@ func (k *TargetClientAdapterWeb) prepareLink(parseLink string) (*url.URL, error)
 	return targetUrl, nil
 }
 
-func (k *TargetClientAdapterWeb) doRequestPages(link *url.URL, pageSize int) ([]TargetAnswer, error) {
+func (k *TargetClientAdapterWeb) doRequestPages(link *url.URL, pageSize int) ([]TargetAnswer, []map[string]interface{}, error) {
 	answers := make([]TargetAnswer, 0)
+	rawItems := make([]map[string]interface{}, 0)
 	page := 1
 
 	setPage(link, page)
-	targetAnswer, err := k.doRequest(link)
-	log.Println("Requesting page...")
+	log.Println("Requesting total count...")
+	firstAnswer, _, err := k.doRequest(link)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	answers = append(answers, targetAnswer)
-	requestsCount := int(math.Ceil(float64(targetAnswer.TotalCount)/float64(pageSize))) - 1
-
+	requestsCount := int(math.Ceil(float64(firstAnswer.TotalCount) / float64(pageSize)))
 	for range requestsCount {
-		page = page + 1
 		setPage(link, page)
 		log.Printf("Requesting %d page...\n", page)
-		targetAnswer, err = k.doRequest(link)
+		targetAnswer, rawAnswer, err := k.doRequest(link)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		page = page + 1
 
 		answers = append(answers, targetAnswer)
+		rawItems = append(rawItems, rawAnswer.Items...)
 	}
 
-	return answers, nil
+	return answers, rawItems, nil
 }
 
 func (k *TargetClientAdapterWeb) fillResultItems(targetAnswer TargetAnswer, result *domain.ParseResult, parseRequestURI *url.URL) {
@@ -104,29 +107,44 @@ func (k *TargetClientAdapterWeb) fillResultItems(targetAnswer TargetAnswer, resu
 	}
 }
 
-func (k *TargetClientAdapterWeb) doRequest(link *url.URL) (TargetAnswer, error) {
+func (k *TargetClientAdapterWeb) doRequest(link *url.URL) (TargetAnswer, *RawAnswer, error) {
 	req, err := http.NewRequest("GET", link.String(), nil)
 	if err != nil {
-		return TargetAnswer{}, err
+		return TargetAnswer{}, nil, err
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return TargetAnswer{}, err
+		return TargetAnswer{}, nil, err
 	}
 	defer resp.Body.Close()
 	log.Println(resp.Status)
 	var targetAnswer TargetAnswer
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return TargetAnswer{}, err
+		return TargetAnswer{}, nil, err
 	}
 	err = json.Unmarshal(body, &targetAnswer)
 	if err != nil {
-		return TargetAnswer{}, err
+		return TargetAnswer{}, nil, err
 	}
 
-	return targetAnswer, nil
+	var rawAnswer RawAnswer
+	_ = json.Unmarshal(body, &rawAnswer)
+
+	return targetAnswer, &rawAnswer, nil
+}
+
+func (k *TargetClientAdapterWeb) associateRawItemsById(rawAnswers []map[string]interface{}) map[int64]map[string]interface{} {
+	result := make(map[int64]map[string]interface{})
+	for _, rawItem := range rawAnswers {
+		if id, ok := rawItem["id"].(float64); ok {
+			result[int64(id)] = rawItem
+		} else {
+			log.Printf("Failed to parse id %v of result item\n", rawItem["id"])
+		}
+	}
+	return result
 }
 
 func setPage(url *url.URL, page int) {
@@ -148,4 +166,8 @@ type TargetAnswer struct {
 type TargetAnswerItem struct {
 	ID      int64  `json:"id"`
 	UrlPath string `json:"urlPath"`
+}
+
+type RawAnswer struct {
+	Items []map[string]interface{} `json:"items"`
 }

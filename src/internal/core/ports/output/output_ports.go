@@ -5,8 +5,7 @@ import (
 )
 
 type ResultStoragePort interface {
-	AddResult(result domain.ParseResult) error
-	GetAllResults() ([]domain.ParseResult, error)
+	SaveNewRawItem(apId int64, rawItem map[string]interface{}) error
 }
 
 type TargetClientPort interface {

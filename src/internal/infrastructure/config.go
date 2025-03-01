@@ -25,12 +25,13 @@ type Config struct {
 	TgInitialApsCountFormat       string
 	TgApsNumNotAllowedFormat      string
 	TgErrorMessage                string
+	TgBotToken                    string
 }
 
 func NewConfig() *Config {
 	parseIntervalMs, err := strconv.ParseInt(os.Getenv("PARSER_INTERVAL_MS"), 10, 64)
 	if err != nil {
-		log.Fatal("Error getting parser interval\n", err)
+		log.Fatal("Error getting prop PARSER_INTERVAL_MS\n", err)
 	}
 	return &Config{
 		ParseInterval:                 time.Duration(parseIntervalMs) * time.Millisecond,
@@ -49,5 +50,6 @@ func NewConfig() *Config {
 		TgInitialApsCountFormat:       pkg.OsGetNonEmpty("TG_INITIAL_APS_COUNT_FORMAT"),
 		TgApsNumNotAllowedFormat:      pkg.OsGetNonEmpty("TG_APS_NUM_NOT_ALLOWED_FORMAT"),
 		TgErrorMessage:                pkg.OsGetNonEmpty("TG_ERROR_MESSAGE"),
+		TgBotToken:                    pkg.OsGetNonEmpty("TELEGRAM_TOKEN"),
 	}
 }

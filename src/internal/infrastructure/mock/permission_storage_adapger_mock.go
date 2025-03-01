@@ -1,4 +1,4 @@
-package output
+package mock
 
 type PermissionMock struct {
 	ChatID     int64

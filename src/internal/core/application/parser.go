@@ -18,6 +18,7 @@ type Parser struct {
 	parserNotificationService *ParserNotificationService
 	isFirstParse              bool
 	apsMemory                 map[int64]domain.ParseItem
+	resultsStorageService     *ResultsStorageService
 	CurrentApsCount           int
 	CurrentBrowserUrl         string
 }
@@ -29,6 +30,7 @@ func newParser(
 	stopWg *sync.WaitGroup,
 	service *ResultService,
 	parserNotificationService *ParserNotificationService,
+	resultsStorageService *ResultsStorageService,
 ) *Parser {
 	stopWg.Add(1)
 	return &Parser{
@@ -40,6 +42,7 @@ func newParser(
 		isFirstParse:              true,
 		resultsService:            service,
 		parserNotificationService: parserNotificationService,
+		resultsStorageService:     resultsStorageService,
 		apsMemory:                 make(map[int64]domain.ParseItem),
 	}
 }
@@ -69,7 +72,7 @@ func (p *Parser) init() {
 
 func (p *Parser) Stop() {
 	p.stopped = true
-	fmt.Printf("Parser %d stopped\n", p.ID)
+	fmt.Printf("Parser %v stopped\n", p.ID)
 }
 
 func (p *Parser) doParse() {
@@ -83,6 +86,7 @@ func (p *Parser) doParse() {
 			p.apsMemory[item.ID] = item
 			if !p.isFirstParse {
 				_ = p.parserNotificationService.SendNewApInfo(p.ChatID, item)
+				p.saveNewRawResult(item.ID, result.RawItemsById)
 			}
 		}
 	}
@@ -95,4 +99,14 @@ func (p *Parser) doParse() {
 	}
 	p.CurrentApsCount = len(result.Items)
 	p.CurrentBrowserUrl = result.BrowserUrl
+}
+
+func (p *Parser) saveNewRawResult(apId int64, rawItems map[int64]map[string]interface{}) {
+	if rawItem, has := rawItems[apId]; has {
+		err := p.resultsStorageService.SaveNewRawItem(apId, rawItem)
+		if err != nil {
+			log.Println("Error saving raw item to storage")
+			log.Println(err)
+		}
+	}
 }
