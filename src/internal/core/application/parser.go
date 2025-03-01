@@ -86,8 +86,8 @@ func (p *Parser) doParse() {
 			p.apsMemory[item.ID] = item
 			if !p.isFirstParse {
 				_ = p.parserNotificationService.SendNewApInfo(p.ChatID, item)
-				p.saveNewRawResult(item.ID, result.RawItemsById)
 			}
+			p.saveNewRawResult(item.ID, result.RawItemsById)
 		}
 	}
 
